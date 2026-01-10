@@ -19,6 +19,23 @@ Complete setup instructions for running Spark VTuber on NVIDIA DGX Spark using U
 - **UV** package manager (we'll install this)
 - **VTube Studio** (if using avatar features)
 
+### vLLM on DGX Spark
+
+DGX Spark uses ARM64 architecture (Grace CPU). The standard vLLM pip package doesn't support ARM64 and will fail to install with "Unknown runtime environment" error.
+
+We include a vendored build script that compiles vLLM from source with Blackwell SM_121 support:
+
+```bash
+# Build vLLM for DGX Spark (~20-30 minutes)
+bash scripts/vllm/install_vllm.sh --install-dir ./vllm-install
+
+# Start vLLM server
+source ./vllm-install/vllm_env.sh
+./vllm-install/vllm-serve.sh "QuixiAI/Qwen3-30B-A3B-AWQ" 8000
+```
+
+See [scripts/vllm/README.md](../scripts/vllm/README.md) for details.
+
 ---
 
 ## Quick Start (5 Minutes)

@@ -157,6 +157,21 @@ uv run spark-vtuber run --no-chat --no-avatar --no-game
 - **Storage:** 2TB+ NVMe (for models)
 - **Network:** Fast connection for model downloads
 
+### vLLM on DGX Spark
+
+DGX Spark uses ARM64 architecture (Grace CPU). The standard vLLM pip package doesn't support ARM64, so we include a vendored build script that compiles vLLM from source with Blackwell SM_121 support:
+
+```bash
+# Build vLLM for DGX Spark (~20-30 minutes)
+bash scripts/vllm/install_vllm.sh --install-dir ./vllm-install
+
+# Start vLLM server
+source ./vllm-install/vllm_env.sh
+./vllm-install/vllm-serve.sh "QuixiAI/Qwen3-30B-A3B-AWQ" 8000
+```
+
+See [scripts/vllm/README.md](scripts/vllm/README.md) for details.
+
 ### Detailed Setup
 
 For complete setup instructions including:
