@@ -2,9 +2,19 @@
 Minecraft game integration for Spark VTuber.
 
 Provides Minecraft control via Mineflayer-style API.
+
+WARNING: This is currently a STUB implementation.
+Real Minecraft integration requires:
+1. Node.js with mineflayer package
+2. IPC bridge between Python and Node.js
+3. Voyager-style skill library
+
+See: https://github.com/PrismarineJS/mineflayer
+See: https://github.com/MineDojo/Voyager
 """
 
 import asyncio
+import warnings
 from typing import Any
 
 from spark_vtuber.game.base import BaseGame, GameAction, GameState, GameStatus
@@ -12,14 +22,21 @@ from spark_vtuber.game.base import BaseGame, GameAction, GameState, GameStatus
 
 class MinecraftGame(BaseGame):
     """
-    Minecraft game integration.
+    Minecraft game integration (STUB IMPLEMENTATION).
 
-    Supports:
-    - Basic movement and actions
-    - Inventory management
-    - Block interaction
-    - Chat commands
-    - Pathfinding (via Baritone-style API)
+    WARNING: This is a placeholder that simulates Minecraft actions.
+    It does NOT actually connect to or control Minecraft.
+
+    For production use, implement mineflayer bridge:
+    1. Use mineflayer npm package via Node.js subprocess
+    2. Implement IPC communication (JSON-RPC over stdio)
+    3. Add vision system using mineflayer-viewer or screen capture
+    4. Implement Voyager skill library with JavaScript execution
+
+    Current stub supports:
+    - Simulated movement and actions (no-op with delays)
+    - Skill registration (stored but not executed)
+    - State tracking (fake values)
     """
 
     def __init__(
@@ -38,6 +55,13 @@ class MinecraftGame(BaseGame):
             username: Bot username
             **kwargs: Additional arguments
         """
+        warnings.warn(
+            "MinecraftGame is a STUB implementation that does not actually "
+            "connect to Minecraft. For production use, implement mineflayer bridge. "
+            "See: https://github.com/PrismarineJS/mineflayer",
+            UserWarning,
+            stacklevel=2,
+        )
         super().__init__(game_name="Minecraft", **kwargs)
         self.host = host
         self.port = port

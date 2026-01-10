@@ -147,9 +147,23 @@ class CoquiTTS(BaseTTS):
         """
         Synthesize speech with streaming output.
 
-        Note: Coqui TTS doesn't natively support streaming,
-        so we synthesize full audio and chunk it.
+        WARNING: This is FAKE streaming - Coqui TTS doesn't natively support
+        true streaming, so we synthesize the FULL audio first and then chunk it.
+        This means latency = full synthesis time (200-500ms per sentence).
+
+        For true streaming with low latency (<100ms first chunk), use StyleTTS2:
+            from spark_vtuber.tts.styletts2 import StyleTTS2
+
+        See: https://github.com/yl4579/StyleTTS2
         """
+        import warnings
+        warnings.warn(
+            "CoquiTTS.synthesize_stream() is fake streaming - full audio is "
+            "synthesized before chunking. For true streaming, use StyleTTS2.",
+            UserWarning,
+            stacklevel=2,
+        )
+
         result = await self.synthesize(text, voice_id, speed, emotion)
         audio = result.audio
 

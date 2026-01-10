@@ -131,12 +131,13 @@ class ChromaMemory(BaseMemory):
 
         entry.embedding = embedding
 
+        # ChromaDB requires consistent types - store importance as float for numeric filtering
         doc_metadata = {
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),
             "personality": personality or "",
             "category": category,
-            "importance": importance,
+            "importance": float(importance),  # Ensure float type for $gte filtering
             **{k: str(v) for k, v in metadata.items()},
         }
 
@@ -280,7 +281,7 @@ class ChromaMemory(BaseMemory):
             "updated_at": now.isoformat(),
             "personality": existing.personality or "",
             "category": existing.category,
-            "importance": new_importance,
+            "importance": float(new_importance),  # Ensure float type for $gte filtering
             **{k: str(v) for k, v in metadata.items()},
         }
 
