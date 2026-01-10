@@ -293,6 +293,236 @@ async def _test_llm(prompt: str, max_tokens: int) -> None:
 
 
 @app.command()
+def benchmark(
+    messages: int = typer.Option(
+        20,
+        "--messages",
+        "-m",
+        help="Number of test messages to run",
+    ),
+    target: float = typer.Option(
+        500.0,
+        "--target",
+        "-t",
+        help="Latency target in milliseconds",
+    ),
+    output: Path = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output JSON file path",
+    ),
+    real: bool = typer.Option(
+        False,
+        "--real",
+        help="Use real pipeline components (requires GPU and models)",
+    ),
+    llm_delay: float = typer.Option(
+        5.0,
+        "--llm-delay",
+        help="Simulated LLM delay per token in ms (mock only)",
+    ),
+    tts_delay: float = typer.Option(
+        10.0,
+        "--tts-delay",
+        help="Simulated TTS delay per chunk in ms (mock only)",
+    ),
+) -> None:
+    """Run performance benchmark on the pipeline."""
+    asyncio.run(_run_benchmark(messages, target, output, real, llm_delay, tts_delay))
+
+
+async def _run_benchmark(
+    messages: int,
+    target: float,
+    output: Path | None,
+    real: bool,
+    llm_delay: float,
+    tts_delay: float,
+) -> None:
+    """Run benchmark."""
+    from spark_vtuber.metrics import (
+        MetricsCollector,
+        PipelineMetrics,
+    )
+    import time
+
+    console.print(Panel.fit(
+        "[bold blue]Spark VTuber Benchmark[/bold blue]\n"
+        f"Running {messages} test messages",
+        border_style="blue",
+    ))
+
+    console.print(f"[yellow]Target latency: <{target}ms[/yellow]")
+
+    if real:
+        console.print("[cyan]Using real pipeline components[/cyan]")
+    else:
+        console.print("[cyan]Using mock components (no GPU required)[/cyan]")
+
+    test_messages = [
+        "Hello! How are you doing today?",
+        "What's your favorite video game?",
+        "Tell me a joke!",
+        "What do you think about the weather?",
+        "Can you sing a song?",
+        "What's the meaning of life?",
+        "Do you have any hobbies?",
+        "What's your opinion on cats vs dogs?",
+        "Tell me something interesting!",
+        "What would you do with a million dollars?",
+        "What's your favorite food?",
+        "Do you believe in aliens?",
+        "What's the best movie you've seen?",
+        "Can you tell me a story?",
+        "What makes you happy?",
+        "What's your biggest fear?",
+        "If you could travel anywhere, where would you go?",
+        "What's your favorite color and why?",
+        "Do you have any advice for someone feeling down?",
+        "What's the most important thing in life?",
+    ]
+
+    collector = MetricsCollector(
+        log_dir=Path("logs"),
+        summary_interval=messages + 1,
+    )
+
+    await collector.start_memory_monitor(interval_seconds=1.0)
+
+    msgs = (test_messages * ((messages // len(test_messages)) + 1))[:messages]
+
+    if not real:
+        for i, msg in enumerate(msgs, 1):
+            console.print(f"\rProcessing message {i}/{messages}...", end="")
+
+            metrics = PipelineMetrics()
+            pipeline_start = time.perf_counter()
+
+            await asyncio.sleep(0.005)
+            metrics.memory_retrieval_ms = 5.0
+
+            llm_start = time.perf_counter()
+            llm_first_token = None
+            token_count = 50
+
+            for _ in range(token_count):
+                await asyncio.sleep(llm_delay / 1000)
+                if llm_first_token is None:
+                    llm_first_token = time.perf_counter()
+
+            llm_end = time.perf_counter()
+
+            tts_start = time.perf_counter()
+            tts_first_chunk = None
+
+            for _ in range(5):
+                await asyncio.sleep(tts_delay / 1000)
+                if tts_first_chunk is None:
+                    tts_first_chunk = time.perf_counter()
+
+            tts_end = time.perf_counter()
+
+            pipeline_end = time.perf_counter()
+
+            metrics.llm_first_token_ms = (
+                (llm_first_token - llm_start) * 1000 if llm_first_token else 0
+            )
+            metrics.llm_total_ms = (llm_end - llm_start) * 1000
+            metrics.llm_tokens_generated = token_count
+            metrics.llm_tokens_per_sec = (
+                token_count / (metrics.llm_total_ms / 1000) if metrics.llm_total_ms > 0 else 0
+            )
+            metrics.tts_first_chunk_ms = (
+                (tts_first_chunk - tts_start) * 1000 if tts_first_chunk else 0
+            )
+            metrics.tts_total_ms = (tts_end - tts_start) * 1000
+            metrics.total_pipeline_ms = (pipeline_end - pipeline_start) * 1000
+
+            collector.record_metrics(metrics)
+
+    else:
+        from spark_vtuber.llm.llama import LlamaLLM
+        from spark_vtuber.tts.coqui import CoquiTTS
+        from spark_vtuber.memory.chroma import ChromaMemory
+        from spark_vtuber.pipeline import StreamingPipeline
+        from spark_vtuber.chat.base import ChatMessage
+
+        settings = get_settings()
+        llm = LlamaLLM(
+            model_name=settings.llm.model_name,
+            quantization=settings.llm.quantization,
+        )
+        tts = CoquiTTS(
+            model_name=settings.tts.model_name,
+            sample_rate=settings.tts.sample_rate,
+        )
+        memory = ChromaMemory(
+            persist_dir=settings.memory.chroma_persist_dir,
+            embedding_model=settings.memory.embedding_model,
+        )
+
+        pipeline = StreamingPipeline(
+            llm=llm,
+            tts=tts,
+            memory=memory,
+            settings=settings,
+            enable_metrics=True,
+        )
+
+        await pipeline.initialize()
+
+        for i, msg in enumerate(msgs, 1):
+            console.print(f"\rProcessing message {i}/{messages}...", end="")
+
+            chat_msg = ChatMessage(
+                username="benchmark_user",
+                content=msg,
+                timestamp=time.time(),
+            )
+            await pipeline.process_message(chat_msg)
+
+        await pipeline.shutdown()
+
+        if pipeline.metrics_collector:
+            collector = pipeline.metrics_collector
+
+    console.print("\n")
+
+    await collector.stop_memory_monitor()
+
+    results = collector.get_benchmark_results(target_ms=target)
+
+    if results:
+        table = Table(title="Benchmark Results")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="yellow")
+
+        table.add_row("Messages", f"{results.total_messages}")
+        table.add_row("Latency p50", f"{results.latency_p50_ms:.1f}ms")
+        table.add_row("Latency p95", f"{results.latency_p95_ms:.1f}ms")
+        table.add_row("Latency p99", f"{results.latency_p99_ms:.1f}ms")
+        table.add_row("Latency mean", f"{results.latency_mean_ms:.1f}ms")
+        table.add_row("LLM tokens/sec", f"{results.llm_tokens_per_sec_mean:.1f}")
+        table.add_row("TTS first chunk", f"{results.tts_first_chunk_mean_ms:.1f}ms")
+        table.add_row("GPU memory peak", f"{results.gpu_memory_peak_gb:.1f} GB")
+        table.add_row("CPU memory peak", f"{results.cpu_memory_peak_gb:.1f} GB")
+        table.add_row("Duration", f"{results.duration_seconds:.1f}s")
+
+        console.print(table)
+
+        status = "[green]PASS[/green]" if results.passes_target else "[red]FAIL[/red]"
+        console.print(f"\nTarget (<{target}ms): {status}")
+
+        if output:
+            results.to_json(output)
+            console.print(f"\n[green]Results written to {output}[/green]")
+
+    else:
+        console.print("[red]No results collected![/red]")
+
+
+@app.command()
 def version() -> None:
     """Show version information."""
     from spark_vtuber import __version__

@@ -5,7 +5,9 @@ Orchestrates all components for real-time AI VTuber streaming.
 """
 
 import asyncio
+import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import AsyncIterator, Callable
 
 import numpy as np
@@ -20,6 +22,7 @@ from spark_vtuber.game.base import BaseGame
 from spark_vtuber.llm.base import BaseLLM
 from spark_vtuber.llm.context import ConversationContext
 from spark_vtuber.memory.base import BaseMemory
+from spark_vtuber.metrics import MetricsCollector, PipelineMetrics, Timer, StreamingTimer
 from spark_vtuber.personality.coordinator import DialogueCoordinator
 from spark_vtuber.personality.manager import PersonalityManager
 from spark_vtuber.tts.base import BaseTTS
@@ -61,6 +64,8 @@ class StreamingPipeline(LoggerMixin):
         chat: BaseChat | None = None,
         game: BaseGame | None = None,
         settings: Settings | None = None,
+        enable_metrics: bool = True,
+        log_dir: Path | None = None,
     ):
         """
         Initialize the streaming pipeline.
@@ -73,6 +78,8 @@ class StreamingPipeline(LoggerMixin):
             chat: Optional chat client
             game: Optional game integration
             settings: Application settings
+            enable_metrics: Enable performance metrics collection
+            log_dir: Directory for metrics logs
         """
         self.llm = llm
         self.tts = tts
@@ -113,6 +120,15 @@ class StreamingPipeline(LoggerMixin):
         self._stats = PipelineStats()
         self._audio_callbacks: list[Callable[[np.ndarray], None]] = []
 
+        self._enable_metrics = enable_metrics
+        self._metrics_collector: MetricsCollector | None = None
+        if enable_metrics:
+            self._metrics_collector = MetricsCollector(
+                log_dir=log_dir or Path("logs"),
+                summary_interval=10,
+                memory_alert_gb=115.0,
+            )
+
     @property
     def stats(self) -> PipelineStats:
         """Get pipeline statistics."""
@@ -122,6 +138,11 @@ class StreamingPipeline(LoggerMixin):
     def is_running(self) -> bool:
         """Check if pipeline is running."""
         return self._running
+
+    @property
+    def metrics_collector(self) -> MetricsCollector | None:
+        """Get metrics collector."""
+        return self._metrics_collector
 
     async def initialize(self) -> None:
         """Initialize all pipeline components."""
@@ -145,6 +166,10 @@ class StreamingPipeline(LoggerMixin):
 
         self.context.system_prompt = await self.personality_manager.get_system_prompt()
 
+        if self._metrics_collector:
+            await self._metrics_collector.start_memory_monitor(interval_seconds=5.0)
+            self.logger.info("Metrics collection enabled")
+
         self.logger.info("Pipeline initialized")
 
     async def shutdown(self) -> None:
@@ -152,6 +177,9 @@ class StreamingPipeline(LoggerMixin):
         self.logger.info("Shutting down pipeline")
 
         self._running = False
+
+        if self._metrics_collector:
+            await self._metrics_collector.stop_memory_monitor()
 
         if self.game:
             await self.game.disconnect()
@@ -220,15 +248,17 @@ class StreamingPipeline(LoggerMixin):
         Args:
             message: Chat message to process
         """
-        import time
-        start_time = time.time()
+        pipeline_start = time.perf_counter()
+        metrics = PipelineMetrics()
 
         self.logger.info(f"Processing message from {message.username}: {message.content[:50]}...")
 
-        relevant_memories = await self.memory.search(
-            message.content,
-            top_k=self.settings.memory.retrieval_top_k,
-        )
+        with Timer() as memory_timer:
+            relevant_memories = await self.memory.search(
+                message.content,
+                top_k=self.settings.memory.retrieval_top_k,
+            )
+        metrics.memory_retrieval_ms = memory_timer.elapsed_ms
 
         if relevant_memories:
             memory_context = "\n".join([
@@ -239,15 +269,38 @@ class StreamingPipeline(LoggerMixin):
                 f"Relevant memories:\n{memory_context}",
             )
 
+        llm_timer = StreamingTimer()
+        tts_timer = StreamingTimer()
+        avatar_total_ms = 0.0
+        token_count = 0
+
+        llm_timer.start()
+        tts_timer.start()
+
         async for personality_name, chunk in self.coordinator.process_user_message(
             message.content,
             username=message.username,
         ):
+            llm_timer.mark_chunk()
+            token_count += 1
+
             async for audio_chunk in self.streaming_tts.process_token(chunk):
+                tts_timer.mark_chunk()
+
+                avatar_start = time.perf_counter()
                 await self._process_audio(audio_chunk)
+                avatar_total_ms += (time.perf_counter() - avatar_start) * 1000
+
+        llm_timer.stop()
 
         async for audio_chunk in self.streaming_tts.flush():
+            tts_timer.mark_chunk()
+
+            avatar_start = time.perf_counter()
             await self._process_audio(audio_chunk)
+            avatar_total_ms += (time.perf_counter() - avatar_start) * 1000
+
+        tts_timer.stop()
 
         await self.memory.add(
             content=f"{message.username}: {message.content}",
@@ -255,14 +308,37 @@ class StreamingPipeline(LoggerMixin):
             personality=self.personality_manager._active_personality,
         )
 
-        response_time = (time.time() - start_time) * 1000
+        pipeline_end = time.perf_counter()
+        total_ms = (pipeline_end - pipeline_start) * 1000
+
+        metrics.llm_first_token_ms = llm_timer.first_chunk_ms
+        metrics.llm_total_ms = llm_timer.total_ms
+        metrics.llm_tokens_generated = token_count
+        metrics.llm_tokens_per_sec = (
+            token_count / (llm_timer.total_ms / 1000) if llm_timer.total_ms > 0 else 0.0
+        )
+        metrics.tts_first_chunk_ms = tts_timer.first_chunk_ms
+        metrics.tts_total_ms = tts_timer.total_ms
+        metrics.avatar_sync_ms = avatar_total_ms
+        metrics.total_pipeline_ms = total_ms
+
+        if self._metrics_collector:
+            self._metrics_collector.record_metrics(metrics)
+
         self._stats.messages_processed += 1
-        self._stats.total_response_time_ms += response_time
+        self._stats.total_response_time_ms += total_ms
         self._stats.average_response_time_ms = (
             self._stats.total_response_time_ms / self._stats.messages_processed
         )
+        self._stats.llm_latency_ms = metrics.llm_first_token_ms
+        self._stats.tts_latency_ms = metrics.tts_first_chunk_ms
 
-        self.logger.info(f"Message processed in {response_time:.0f}ms")
+        passes = "PASS" if metrics.passes_latency_target() else "FAIL"
+        self.logger.info(
+            f"Message processed in {total_ms:.0f}ms [{passes}] | "
+            f"LLM: {metrics.llm_first_token_ms:.0f}ms first token, {token_count} tokens @ {metrics.llm_tokens_per_sec:.1f}/s | "
+            f"TTS: {metrics.tts_first_chunk_ms:.0f}ms first chunk"
+        )
 
     async def _process_audio(self, audio: np.ndarray) -> None:
         """Process audio chunk for playback and lip sync."""
