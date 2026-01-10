@@ -11,8 +11,8 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 dependencies = [
-    # LLM Inference
-    "vllm>=0.4.0",
+    # LLM Inference (vLLM is optional - see [project.optional-dependencies])
+    # On DGX Spark (ARM64), use transformers backend instead of vLLM
     "transformers>=4.40.0",
     "peft>=0.10.0",
     "accelerate>=0.28.0",
@@ -59,6 +59,11 @@ dev = [
     "ruff>=0.3.0",
     "mypy>=1.9.0",
     "pre-commit>=3.6.0",
+]
+# vLLM for high-performance inference (x86_64 only, not available on DGX Spark ARM64)
+# On DGX Spark, use NVIDIA's custom vLLM Docker image or transformers backend
+vllm = [
+    "vllm>=0.4.0",
 ]
 bitsandbytes = [
     "bitsandbytes>=0.43.0",
