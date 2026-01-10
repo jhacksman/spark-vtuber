@@ -52,22 +52,35 @@ spark-vtuber/
 
 ## Current Status
 
-**Phase:** Research & Planning
+**Phase:** ⚠️ **Alpha Testing** - Implementation complete, requires critical fixes before production
 
-The project is currently in the research phase. We have completed:
-- ✅ Technical feasibility analysis
-- ✅ Hardware requirement validation
-- ✅ Model and technology selection
-- ✅ Architecture design
-- ✅ Implementation roadmap
+### ✅ Completed
+- Technical feasibility analysis
+- Hardware requirement validation
+- Model and technology selection
+- Architecture design and implementation
+- Core LLM inference pipeline (vLLM + transformers fallback)
+- TTS integration (Coqui)
+- STT integration (Faster-Whisper)
+- Memory system (ChromaDB + semantic search)
+- Avatar control (VTube Studio API)
+- Dual AI personality system with LoRA switching
+- Chat integration (Twitch IRC)
+- Main pipeline orchestration
+- CLI interface with Typer
+
+### ⚠️ Known Issues (See [Audit Report](docs/AUDIT_REPORT.md))
+- TTS not truly streaming (requires replacement with StyleTTS2/Fish Speech)
+- Memory quantization configuration needs correction (AWQ vs generic 4bit)
+- Missing latency instrumentation
+- Minecraft integration stubbed (not functional)
+- Security improvements needed for credential handling
 
 **Next Steps:**
-- Set up development environment on DGX Spark
-- Implement core LLM inference pipeline
-- Integrate TTS and avatar systems
-- Build memory and persistence layer
-
-See [research/reports/technical_feasibility_analysis.md](research/reports/technical_feasibility_analysis.md) for detailed findings.
+- Fix critical issues identified in audit
+- Test on DGX Spark hardware
+- Benchmark actual latency and memory usage
+- Production hardening
 
 ## Key Technical Decisions
 
@@ -118,36 +131,83 @@ See [research/reports/technical_feasibility_analysis.md](research/reports/techni
 - **Uptime:** 8+ hours continuous
 - **Memory Efficiency:** <120GB sustained
 
-## Getting Started
+## Quick Start
 
-### Prerequisites
-- NVIDIA DGX Spark with GB10 Grace Blackwell
-- Ubuntu 22.04 or later
-- CUDA 12.3+
-- Python 3.10+
-- 2TB+ NVMe storage
-
-### Installation
+### 5-Minute Setup (Using UV)
 
 ```bash
-# Repository setup
+# Clone repository
 git clone https://github.com/jhacksman/spark-vtuber.git
 cd spark-vtuber
 
-# (Future) Install dependencies
-# pip install -r requirements.txt
+# Run automated setup (installs UV, creates venv, installs dependencies)
+bash scripts/setup.sh
 
-# (Future) Download models
-# ./scripts/download_models.sh
+# Activate virtual environment
+source .venv/bin/activate
+
+# Run in test mode (LLM + TTS only, no external dependencies)
+uv run spark-vtuber run --no-chat --no-avatar --no-game
 ```
 
-> **Note:** Implementation is in progress. Installation instructions will be added as components are developed.
+**First run will download models automatically (~40GB, takes 1-2 hours).**
+
+### Prerequisites
+
+- **Hardware:** NVIDIA DGX Spark with GB10 Grace Blackwell (or NVIDIA GPU with 40GB+ VRAM)
+- **OS:** Ubuntu 22.04 LTS or later
+- **CUDA:** 12.3+ with NVIDIA drivers 545+
+- **Python:** 3.10+
+- **Storage:** 2TB+ NVMe (for models)
+- **Network:** Fast connection for model downloads
+
+### Detailed Setup
+
+For complete setup instructions including:
+- VTube Studio avatar configuration
+- Twitch chat integration
+- Model selection and download
+- Performance tuning
+- Troubleshooting
+
+**See [docs/SETUP.md](docs/SETUP.md)**
+
+### Testing Components
+
+```bash
+# Test LLM generation (downloads model on first run)
+uv run spark-vtuber test-llm "Hello, who are you?"
+
+# Test TTS synthesis
+uv run spark-vtuber test-tts "Testing text to speech" --output test.wav
+
+# Show configuration
+uv run spark-vtuber status
+
+# Run with avatar (requires VTube Studio running)
+uv run spark-vtuber run --no-chat --no-game
+
+# Run with Twitch chat (requires .env configuration)
+uv run spark-vtuber run --no-avatar --no-game
+
+# Full system (all components)
+uv run spark-vtuber run
+```
 
 ## Documentation
 
+### Setup & Usage
+- **[Setup Guide](docs/SETUP.md)** - Complete installation and configuration instructions
+- **[Audit Report](docs/AUDIT_REPORT.md)** - Technical audit of current implementation (READ THIS FIRST!)
+
+### Research & Analysis
 - **[Research Overview](research/README.md)** - Technical research and feasibility studies
-- **[Technical Feasibility Analysis](research/reports/technical_feasibility_analysis.md)** - Comprehensive technical analysis
+- **[Technical Feasibility Analysis](research/reports/technical_feasibility_analysis.md)** - Original feasibility study
 - **[Implementation Roadmap](research/reports/technical_feasibility_analysis.md#8-implementation-roadmap)** - Development phases and timeline
+
+### Key Documents
+- **[pyproject.toml](pyproject.toml)** - Project dependencies and configuration
+- **[.env.example](.env.example)** - Environment configuration template
 
 ## Contributing
 

@@ -5,7 +5,8 @@
 You are auditing a complete AI VTuber streaming system implementation for NVIDIA DGX Spark (128GB unified memory). The implementation was created by Devin and needs thorough review before production use.
 
 **Repository**: https://github.com/jhacksman/spark-vtuber
-**Branch**: `main` (implementation merged)
+**PR**: https://github.com/jhacksman/spark-vtuber/pull/3
+**Branch**: `devin/1768009836-full-implementation`
 
 ## Implementation Overview
 
@@ -264,9 +265,10 @@ Please provide your audit in the following format:
 ## Commands to Run
 
 ```bash
-# Clone the repo
+# Clone and checkout the PR branch
 git clone https://github.com/jhacksman/spark-vtuber.git
 cd spark-vtuber
+git checkout devin/1768009836-full-implementation
 
 # View the implementation
 find src -name "*.py" | head -20
