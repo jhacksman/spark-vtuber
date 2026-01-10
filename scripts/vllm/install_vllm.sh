@@ -536,6 +536,13 @@ parse_args() {
 main() {
     parse_args "$@"
 
+    # Convert INSTALL_DIR to absolute path to avoid issues after cd
+    INSTALL_DIR="$(cd "$(dirname "$INSTALL_DIR")" 2>/dev/null && pwd)/$(basename "$INSTALL_DIR")"
+    # Handle case where parent directory doesn't exist yet
+    if [[ "$INSTALL_DIR" == "/$(basename "$INSTALL_DIR")" ]]; then
+        INSTALL_DIR="$PWD/$(basename "$INSTALL_DIR")"
+    fi
+
     print_header "vLLM Installation for DGX Spark (Blackwell GB10)"
     log_info "Installation directory: $INSTALL_DIR"
     log_info "vLLM version: $VLLM_VERSION"
