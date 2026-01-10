@@ -22,8 +22,8 @@ accelerate = "^0.28.0"
 torch = "^2.2.0"
 bitsandbytes = "^0.43.0"
 
-# TTS
-TTS = "^0.22.0"
+# TTS (Fish Speech for local inference)
+fish-audio-sdk = "^1.0.0"
 soundfile = "^0.12.0"
 scipy = "^1.12.0"
 

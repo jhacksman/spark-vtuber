@@ -88,7 +88,8 @@ async def _run_pipeline(
 ) -> None:
     """Run the streaming pipeline."""
     from spark_vtuber.llm.llama import LlamaLLM
-    from spark_vtuber.tts.coqui import CoquiTTS
+    from spark_vtuber.tts.fish_speech import FishSpeechTTS
+    from spark_vtuber.tts.styletts2 import StyleTTS2
     from spark_vtuber.memory.chroma import ChromaMemory
     from spark_vtuber.avatar.vtube_studio import VTubeStudioAvatar
     from spark_vtuber.avatar.dual_vtube_studio import DualVTubeStudioAvatar
@@ -104,10 +105,18 @@ async def _run_pipeline(
         max_model_len=settings.llm.context_length,
     )
 
-    tts = CoquiTTS(
-        model_name=settings.tts.model_name,
-        sample_rate=settings.tts.sample_rate,
-    )
+    if settings.tts.engine == "fish_speech":
+        tts = FishSpeechTTS(
+            sample_rate=settings.tts.sample_rate,
+            use_api=settings.tts.use_api,
+            api_key=settings.tts.api_key,
+            reference_id=settings.tts.voice_id,
+            model=settings.tts.model_name,
+        )
+    else:
+        tts = StyleTTS2(
+            sample_rate=settings.tts.sample_rate,
+        )
 
     memory = ChromaMemory(
         persist_dir=settings.memory.chroma_persist_dir,
@@ -234,17 +243,27 @@ def test_tts(
 
 async def _test_tts(text: str, output: Path) -> None:
     """Run TTS test."""
-    from spark_vtuber.tts.coqui import CoquiTTS
+    from spark_vtuber.tts.fish_speech import FishSpeechTTS
+    from spark_vtuber.tts.styletts2 import StyleTTS2
     import soundfile as sf
 
     settings = get_settings()
 
     console.print(f"[yellow]Synthesizing: {text}[/yellow]")
+    console.print(f"[cyan]Using TTS engine: {settings.tts.engine}[/cyan]")
 
-    tts = CoquiTTS(
-        model_name=settings.tts.model_name,
-        sample_rate=settings.tts.sample_rate,
-    )
+    if settings.tts.engine == "fish_speech":
+        tts = FishSpeechTTS(
+            sample_rate=settings.tts.sample_rate,
+            use_api=settings.tts.use_api,
+            api_key=settings.tts.api_key,
+            reference_id=settings.tts.voice_id,
+            model=settings.tts.model_name,
+        )
+    else:
+        tts = StyleTTS2(
+            sample_rate=settings.tts.sample_rate,
+        )
 
     await tts.load()
 
