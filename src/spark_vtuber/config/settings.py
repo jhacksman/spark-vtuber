@@ -37,17 +37,25 @@ class LLMSettings(BaseSettings):
 class TTSSettings(BaseSettings):
     """Text-to-speech configuration settings."""
 
-    engine: Literal["styletts2", "fish_speech", "coqui"] = Field(
-        default="styletts2",
-        description="TTS engine to use (styletts2 recommended for streaming)",
+    engine: Literal["fish_speech", "styletts2"] = Field(
+        default="fish_speech",
+        description="TTS engine to use (fish_speech recommended for production)",
     )
     model_name: str = Field(
-        default="tts_models/en/ljspeech/tacotron2-DDC",
-        description="TTS model name",
+        default="speech-1.5",
+        description="Fish Speech model version (speech-1.5 recommended)",
     )
-    voice_id: str | None = Field(default=None, description="Voice ID for cloning")
-    sample_rate: int = Field(default=22050, description="Audio sample rate")
+    voice_id: str | None = Field(default=None, description="Voice reference ID for synthesis")
+    sample_rate: int = Field(default=44100, description="Audio sample rate (44100 for Fish Speech)")
     streaming: bool = Field(default=True, description="Enable streaming synthesis")
+    use_api: bool = Field(
+        default=True,
+        description="Use Fish Audio cloud API (set False for local inference)",
+    )
+    api_key: str | None = Field(
+        default=None,
+        description="Fish Audio API key (or set FISH_API_KEY env var)",
+    )
 
     model_config = SettingsConfigDict(env_prefix="TTS_")
 
