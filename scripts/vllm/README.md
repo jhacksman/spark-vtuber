@@ -43,8 +43,8 @@ cd vllm-install
 # Start server with default model (Qwen2.5-0.5B-Instruct)
 ./vllm-serve.sh
 
-# Or specify a model
-./vllm-serve.sh "QuixiAI/Qwen3-30B-A3B-AWQ" 8000
+# Or specify a local model path (after running download_models.sh)
+./vllm-serve.sh "../models/qwen3-30b-a3b-awq" 8000
 
 # Check status
 ./vllm-status.sh
@@ -60,7 +60,7 @@ The spark-vtuber LLM module can connect to vLLM's OpenAI-compatible API:
 ```bash
 # In .env
 LLM__VLLM_API_URL=http://localhost:8000/v1
-LLM__MODEL_NAME=QuixiAI/Qwen3-30B-A3B-AWQ
+LLM__MODEL_NAME=./models/qwen3-30b-a3b-awq
 ```
 
 ## Files

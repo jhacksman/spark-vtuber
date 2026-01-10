@@ -29,9 +29,12 @@ We include a vendored build script that compiles vLLM from source with Blackwell
 # Build vLLM for DGX Spark (~20-30 minutes)
 bash scripts/vllm/install_vllm.sh --install-dir ./vllm-install
 
+# Download models first (if not already done)
+bash scripts/download_models.sh
+
 # Start vLLM server
 source ./vllm-install/vllm_env.sh
-./vllm-install/vllm-serve.sh "QuixiAI/Qwen3-30B-A3B-AWQ" 8000
+./vllm-install/vllm-serve.sh "./models/qwen3-30b-a3b-awq" 8000
 ```
 
 See [scripts/vllm/README.md](../scripts/vllm/README.md) for details.
