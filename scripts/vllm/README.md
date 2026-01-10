@@ -18,7 +18,7 @@ The standard vLLM pip package doesn't support DGX Spark's ARM64 + Blackwell arch
 
 - NVIDIA DGX Spark with GB10 GPU
 - CUDA 13.0+ toolkit installed
-- ~50GB free disk space
+- ~50GB free disk space during build (final installation ~10-15GB)
 - ~20-30 minutes build time
 
 ## Installation
