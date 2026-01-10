@@ -268,18 +268,25 @@ install_pytorch() {
 install_triton() {
     print_header "Step 4/8: Installing Triton from Main Branch"
 
+    # Clear stale Triton cache to prevent corrupted downloads
+    # This cache can contain partially downloaded files that cause tarfile.ReadError
+    if [ -d "$HOME/.triton" ]; then
+        log_info "Clearing stale Triton cache at ~/.triton..."
+        rm -rf "$HOME/.triton"
+        log_success "Triton cache cleared"
+    fi
+
     TRITON_DIR="$INSTALL_DIR/triton"
 
     if [ -d "$TRITON_DIR" ]; then
-        log_info "Triton directory exists, updating..."
-        cd "$TRITON_DIR"
-        git fetch
-    else
-        log_info "Cloning Triton repository..."
-        cd "$INSTALL_DIR"
-        git clone https://github.com/triton-lang/triton.git
-        cd triton
+        log_info "Triton directory exists, removing for clean build..."
+        rm -rf "$TRITON_DIR"
     fi
+
+    log_info "Cloning Triton repository..."
+    cd "$INSTALL_DIR"
+    git clone https://github.com/triton-lang/triton.git
+    cd triton
 
     log_info "Checking out Triton commit $TRITON_VERSION (tested with Blackwell)..."
     git checkout "$TRITON_VERSION"
@@ -289,10 +296,14 @@ install_triton() {
     source "$INSTALL_DIR/.vllm/bin/activate"
     uv pip install pip cmake ninja pybind11
 
-    log_info "Building Triton (this takes ~5 minutes)..."
+    log_info "Building Triton (this takes ~5-10 minutes)..."
     # Use python -m pip for better build error handling with Triton
+    # Set environment variables for NVIDIA-only build on ARM64/Blackwell
     export TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas
     export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc)
+    # Disable Proton profiler (not needed and can cause build issues)
+    export TRITON_BUILD_WITH_PROTON=0
+    
     python -m pip install --no-build-isolation -v . 2>&1 | tee "$INSTALL_DIR/triton-build.log"
 
     if [ ${PIPESTATUS[0]} -ne 0 ]; then
