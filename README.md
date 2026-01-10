@@ -5,7 +5,7 @@ An AI-powered VTuber streaming system built for NVIDIA DGX Spark, inspired by Ne
 ## Project Overview
 
 Spark VTuber is a comprehensive AI streaming system that combines:
-- **Large Language Models (70B+)** for natural conversation and personality
+- **Large Language Models (Qwen3 MoE)** for natural conversation and personality
 - **Real-time Text-to-Speech** for voice synthesis (<150ms latency)
 - **Live2D Avatar** with audio-driven lip synchronization
 - **Game Integration** for autonomous gameplay (Minecraft, turn-based games, rhythm games)
@@ -87,18 +87,17 @@ spark-vtuber/
 ### Architecture Approach
 
 **LoRA-Based Dual AI System** (Recommended)
-- Single Llama 3.1 70B base model (~35GB)
+- Single Qwen3-30B-A3B base model (~15-20GB with AWQ)
+- MoE architecture: 30B total params, 3B active per token
 - Two LoRA personality adapters (~3GB total)
 - Shared memory with personality-tagged entries
 - <20ms personality switching latency
-
-**Alternative:** Dual Qwen2.5-32B models (safer, 32GB total)
 
 ### Technology Stack
 
 | Component | Technology | Memory | Latency |
 |-----------|-----------|--------|---------|
-| LLM | Llama 3.1 70B (4-bit) | 35-40GB | 200-400ms |
+| LLM | Qwen3-30B-A3B (AWQ) | 15-20GB | 200-400ms |
 | TTS | StyleTTS2 / Fish Speech | 2-4GB | 80-150ms |
 | STT | Faster-Whisper (Large-v3) | 3-5GB | 200-400ms |
 | Memory | Mem0 + ChromaDB | 5-10GB | <50ms |
@@ -114,7 +113,7 @@ spark-vtuber/
 ## Research Findings
 
 ### Memory Allocation (128GB Total)
-- LLM: 35-40GB
+- LLM: 15-20GB (Qwen3-30B-A3B MoE with AWQ)
 - Dual AI (LoRA): +3GB
 - TTS: 2-4GB
 - STT: 3-5GB
@@ -150,11 +149,11 @@ source .venv/bin/activate
 uv run spark-vtuber run --no-chat --no-avatar --no-game
 ```
 
-**First run will download models automatically (~40GB, takes 1-2 hours).**
+**First run will download models automatically (~20GB, takes 30-60 minutes).**
 
 ### Prerequisites
 
-- **Hardware:** NVIDIA DGX Spark with GB10 Grace Blackwell (or NVIDIA GPU with 40GB+ VRAM)
+- **Hardware:** NVIDIA DGX Spark with GB10 Grace Blackwell (or NVIDIA GPU with 20GB+ VRAM)
 - **OS:** Ubuntu 22.04 LTS or later
 - **CUDA:** 12.3+ with NVIDIA drivers 545+
 - **Python:** 3.10+
@@ -238,7 +237,7 @@ TBD (Will be determined once core implementation begins)
 ## Acknowledgments
 
 - NVIDIA for DGX Spark hardware and TensorRT-LLM
-- Meta for Llama 3.1
+- Alibaba/Qwen team for Qwen3 models
 - Open-source communities behind StyleTTS2, Faster-Whisper, ChromaDB, and Mem0
 - VTube Studio and Live2D for avatar technologies
 

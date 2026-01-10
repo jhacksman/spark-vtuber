@@ -249,14 +249,14 @@ async def run_benchmark(
 
     else:
         from spark_vtuber.config.settings import Settings
-        from spark_vtuber.llm.llama import LlamaLLM
+        from spark_vtuber.llm.llama import QwenLLM
         from spark_vtuber.tts.coqui import CoquiTTS
         from spark_vtuber.memory.chroma import ChromaMemory
         from spark_vtuber.pipeline import StreamingPipeline
         from spark_vtuber.chat.base import ChatMessage
 
         settings = Settings()
-        llm = LlamaLLM(settings.llm)
+        llm = QwenLLM(settings.llm)
         tts = CoquiTTS(settings.tts)
         memory = ChromaMemory(settings.memory)
 

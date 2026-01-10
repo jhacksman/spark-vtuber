@@ -1,7 +1,8 @@
 """
-Llama LLM implementation for Spark VTuber.
+Qwen LLM implementation for Spark VTuber.
 
-Supports Llama 3.1 and compatible models with vLLM backend.
+Supports Qwen3 MoE models (30B-A3B, etc.) with vLLM backend.
+Default model: Qwen3-30B-A3B (30B total params, 3B active per token)
 """
 
 import asyncio
@@ -11,12 +12,13 @@ from typing import AsyncIterator
 from spark_vtuber.llm.base import BaseLLM, LLMResponse
 
 
-class LlamaLLM(BaseLLM):
+class QwenLLM(BaseLLM):
     """
-    Llama model implementation using vLLM for efficient inference.
+    Qwen model implementation using vLLM for efficient inference.
 
     Supports:
-    - Llama 3.1 70B and smaller variants
+    - Qwen3-30B-A3B (MoE: 30B total, 3B active per token) - default
+    - Qwen3-72B and other Qwen variants
     - 4-bit quantization (AWQ/GPTQ)
     - LoRA adapter loading
     - Streaming generation
@@ -24,7 +26,7 @@ class LlamaLLM(BaseLLM):
 
     def __init__(
         self,
-        model_name: str = "meta-llama/Llama-3.1-70B-Instruct",
+        model_name: str = "Qwen/Qwen3-30B-A3B-Instruct",
         quantization: str = "awq",
         gpu_memory_utilization: float = 0.85,
         max_model_len: int = 8192,

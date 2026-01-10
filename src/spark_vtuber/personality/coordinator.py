@@ -180,7 +180,7 @@ class DialogueCoordinator(LoggerMixin):
         if not personality:
             return
 
-        prompt = self.context.format_for_llama()
+        prompt = self.context.format_for_chatml()
 
         full_response = []
         async for token in self.llm.generate_stream(prompt):
@@ -229,7 +229,7 @@ class DialogueCoordinator(LoggerMixin):
         interjection_prompt = self._create_interjection_prompt()
         self.context.system_prompt = self.personality_manager.active_personality.system_prompt
 
-        prompt = self.context.format_for_llama()
+        prompt = self.context.format_for_chatml()
 
         full_response = []
         async for token in self.llm.generate_stream(

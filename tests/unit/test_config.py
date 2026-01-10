@@ -23,8 +23,8 @@ class TestLLMSettings:
     def test_default_values(self):
         """Test default LLM settings."""
         settings = LLMSettings()
-        assert settings.model_name == "meta-llama/Llama-3.1-70B-Instruct"
-        assert settings.quantization == "4bit"
+        assert settings.model_name == "Qwen/Qwen3-30B-A3B-Instruct"
+        assert settings.quantization == "awq"
         assert settings.max_tokens == 2048
         assert settings.temperature == 0.7
         assert settings.top_p == 0.9

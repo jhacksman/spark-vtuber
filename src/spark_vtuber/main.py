@@ -87,7 +87,7 @@ async def _run_pipeline(
     no_game: bool,
 ) -> None:
     """Run the streaming pipeline."""
-    from spark_vtuber.llm.llama import LlamaLLM
+    from spark_vtuber.llm.llama import QwenLLM
     from spark_vtuber.tts.fish_speech import FishSpeechTTS
     from spark_vtuber.tts.styletts2 import StyleTTS2
     from spark_vtuber.memory.chroma import ChromaMemory
@@ -98,7 +98,7 @@ async def _run_pipeline(
 
     console.print("[yellow]Initializing components...[/yellow]")
 
-    llm = LlamaLLM(
+    llm = QwenLLM(
         model_name=settings.llm.model_name,
         quantization=settings.llm.quantization,
         gpu_memory_utilization=settings.llm.gpu_memory_utilization,
@@ -289,13 +289,13 @@ def test_llm(
 
 async def _test_llm(prompt: str, max_tokens: int) -> None:
     """Run LLM test."""
-    from spark_vtuber.llm.llama import LlamaLLM
+    from spark_vtuber.llm.llama import QwenLLM
 
     settings = get_settings()
 
     console.print(f"[yellow]Generating response for: {prompt}[/yellow]")
 
-    llm = LlamaLLM(
+    llm = QwenLLM(
         model_name=settings.llm.model_name,
         quantization=settings.llm.quantization,
     )
@@ -461,14 +461,14 @@ async def _run_benchmark(
             collector.record_metrics(metrics)
 
     else:
-        from spark_vtuber.llm.llama import LlamaLLM
+        from spark_vtuber.llm.llama import QwenLLM
         from spark_vtuber.tts.coqui import CoquiTTS
         from spark_vtuber.memory.chroma import ChromaMemory
         from spark_vtuber.pipeline import StreamingPipeline
         from spark_vtuber.chat.base import ChatMessage
 
         settings = get_settings()
-        llm = LlamaLLM(
+        llm = QwenLLM(
             model_name=settings.llm.model_name,
             quantization=settings.llm.quantization,
         )
