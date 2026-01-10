@@ -233,9 +233,10 @@ TBD (Will be determined once core implementation begins)
 
 ## Acknowledgments
 
-- NVIDIA for DGX Spark hardware and TensorRT-LLM
+- NVIDIA for DGX Spark hardware, TensorRT-LLM, and Parakeet TDT
 - Alibaba/Qwen team for Qwen3 models
-- Open-source communities behind StyleTTS2, Faster-Whisper, ChromaDB, and Mem0
+- Fish Audio team for Fish Speech 1.5
+- Open-source communities behind ChromaDB and Mem0
 - VTube Studio and Live2D for avatar technologies
 
 ---
