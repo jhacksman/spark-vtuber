@@ -60,24 +60,21 @@ spark-vtuber/
 - Model and technology selection
 - Architecture design and implementation
 - Core LLM inference pipeline (vLLM + transformers fallback)
-- TTS integration (Coqui)
-- STT integration (Faster-Whisper)
+- TTS integration (Fish Speech 1.5 local inference)
+- STT integration (Parakeet TDT 0.6B V2)
 - Memory system (ChromaDB + semantic search)
 - Avatar control (VTube Studio API)
 - Dual AI personality system with LoRA switching
 - Chat integration (Twitch IRC)
 - Main pipeline orchestration
 - CLI interface with Typer
+- Performance metrics and instrumentation
 
 ### ⚠️ Known Issues (See [Audit Report](docs/AUDIT_REPORT.md))
-- TTS not truly streaming (requires replacement with StyleTTS2/Fish Speech)
-- Memory quantization configuration needs correction (AWQ vs generic 4bit)
-- Missing latency instrumentation
 - Minecraft integration stubbed (not functional)
 - Security improvements needed for credential handling
 
 **Next Steps:**
-- Fix critical issues identified in audit
 - Test on DGX Spark hardware
 - Benchmark actual latency and memory usage
 - Production hardening
@@ -98,8 +95,8 @@ spark-vtuber/
 | Component | Technology | Memory | Latency |
 |-----------|-----------|--------|---------|
 | LLM | Qwen3-30B-A3B (AWQ) | 15-20GB | 200-400ms |
-| TTS | StyleTTS2 / Fish Speech | 2-4GB | 80-150ms |
-| STT | Faster-Whisper (Large-v3) | 3-5GB | 200-400ms |
+| TTS | Fish Speech 1.5 | ~12GB | 80-150ms |
+| STT | Parakeet TDT 0.6B V2 | ~4GB | <100ms |
 | Memory | Mem0 + ChromaDB | 5-10GB | <50ms |
 | Avatar | VTube Studio + Live2D | ~2GB | 16-33ms |
 | Vision | YOLO-World / Florence-2 | 4-8GB | <50ms |
@@ -243,6 +240,6 @@ TBD (Will be determined once core implementation begins)
 
 ---
 
-**Project Status:** Research Phase
+**Project Status:** Alpha Testing
 **Last Updated:** January 10, 2026
 **Hardware:** NVIDIA DGX Spark (GB10)
