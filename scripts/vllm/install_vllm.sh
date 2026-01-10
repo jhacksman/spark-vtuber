@@ -434,8 +434,12 @@ fix_flashinfer_license() {
     if [ -n "$FLASHINFER_DIRS" ]; then
         for PYPROJECT in $FLASHINFER_DIRS; do
             log_info "Patching $PYPROJECT"
-            sed -i 's/^license = "Apache-2.0"$/license = {text = "Apache-2.0"}/' "$PYPROJECT"
-            sed -i '/^license-files = /d' "$PYPROJECT"
+            # More robust regex that handles various whitespace patterns
+            sed -i 's/^license[[:space:]]*=[[:space:]]*"Apache-2.0"[[:space:]]*$/license = {text = "Apache-2.0"}/' "$PYPROJECT"
+            sed -i 's/^license[[:space:]]*=[[:space:]]*"Apache-2\.0"[[:space:]]*$/license = {text = "Apache-2.0"}/' "$PYPROJECT"
+            # Remove license-files field which conflicts with PEP 621
+            sed -i '/^license-files[[:space:]]*=/d' "$PYPROJECT"
+            log_info "Applied fix to $PYPROJECT"
         done
         log_success "flashinfer-python license field fixed"
         return 0
@@ -459,6 +463,20 @@ build_vllm() {
     export TORCH_CUDA_ARCH_LIST=12.1a
     export VLLM_USE_FLASHINFER_MXFP4_MOE=1
     export TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas
+
+    log_info "Pre-downloading dependencies to apply fixes..."
+
+    # Download flashinfer without building to apply the fix
+    set +e
+    uv pip download flashinfer-python==0.4.1 --no-deps 2>/dev/null
+    set -e
+
+    # Wait a moment for cache to be written
+    sleep 2
+
+    # Apply flashinfer fix before building
+    log_info "Applying flashinfer-python license fix..."
+    fix_flashinfer_license
 
     log_info "Starting vLLM build..."
     log_warning "This will take 15-20 minutes. Go grab a coffee!"
