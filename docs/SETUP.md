@@ -118,7 +118,7 @@ bash scripts/download_models.sh
 
 # This downloads:
 # - Qwen3-30B-A3B AWQ (quantized MoE model)
-# - Coqui TTS model
+# - Fish Speech 1.5 model (openaudio-s1-mini)
 # - Whisper Large-v3
 # - Sentence transformer for embeddings
 ```
@@ -138,7 +138,14 @@ huggingface-cli download \
     --local-dir models/qwen3-30b-a3b-awq \
     --local-dir-use-symlinks False
 
-# Coqui TTS models download automatically on first use
+# Fish Speech 1.5 setup (local inference)
+git clone https://github.com/fishaudio/fish-speech
+cd fish-speech && pip install -e ".[cu129]"
+cd ..
+
+# Fish Speech model downloads automatically from HuggingFace on first use
+# Or manually download:
+# huggingface-cli download fishaudio/openaudio-s1-mini --local-dir models/fish-speech
 
 # Whisper models download automatically on first use
 ```
@@ -162,9 +169,11 @@ LLM__QUANTIZATION=awq
 LLM__GPU_MEMORY_UTILIZATION=0.70
 LLM__CONTEXT_LENGTH=8192
 
-# TTS Configuration
-TTS__ENGINE=coqui
-TTS__MODEL_NAME=tts_models/en/ljspeech/tacotron2-DDC
+# TTS Configuration (Fish Speech 1.5 - local inference)
+TTS__ENGINE=fish_speech
+TTS__USE_API=false
+TTS__DEVICE=cuda
+TTS__HALF_PRECISION=true
 
 # STT Configuration
 STT__MODEL_SIZE=large-v3
