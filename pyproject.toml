@@ -20,7 +20,9 @@ transformers = "^4.40.0"
 peft = "^0.10.0"
 accelerate = "^0.28.0"
 torch = "^2.2.0"
-bitsandbytes = "^0.43.0"
+# Note: bitsandbytes is optional - only needed for bitsandbytes_4bit quantization
+# AWQ quantization (default) is handled by vLLM and doesn't require bitsandbytes
+# bitsandbytes doesn't have aarch64 wheels, so it's moved to optional extras
 
 # TTS (Fish Speech for local inference)
 fish-audio-sdk = "^1.0.0"
@@ -60,6 +62,12 @@ python-dotenv = "^1.0.0"
 asyncio-mqtt = "^0.16.0"
 aiofiles = "^23.2.0"
 
+[tool.poetry.extras]
+# Optional: bitsandbytes for 4-bit quantization on x86_64 systems
+# Install with: pip install spark-vtuber[bitsandbytes]
+# Note: Not available on aarch64 (DGX Spark uses AWQ quantization by default)
+bitsandbytes = ["bitsandbytes"]
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
 pytest-asyncio = "^0.23.0"
@@ -68,6 +76,10 @@ black = "^24.0.0"
 ruff = "^0.3.0"
 mypy = "^1.9.0"
 pre-commit = "^3.6.0"
+
+[tool.poetry.dependencies.bitsandbytes]
+version = "^0.43.0"
+optional = true
 
 [tool.poetry.scripts]
 spark-vtuber = "spark_vtuber.main:app"
