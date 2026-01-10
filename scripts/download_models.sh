@@ -143,7 +143,6 @@ fi
 # STT models (Parakeet TDT 0.6B V2)
 echo ""
 log_info "=== STT Models (Parakeet TDT 0.6B V2) ==="
-log_info "Parakeet TDT model will download automatically on first use via NeMo"
 log_info "Model: nvidia/parakeet-tdt-0.6b-v2 (~4GB)"
 log_info "16x faster than Whisper Turbo, 6.05% WER"
 echo ""
@@ -152,39 +151,27 @@ echo
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     log_info "Pre-downloading Parakeet TDT model..."
-
-    python3 << 'EOF'
-try:
-    import nemo.collections.asr as nemo_asr
-    print("Downloading Parakeet TDT 0.6B V2...")
-    model = nemo_asr.models.ASRModel.from_pretrained(
-        model_name="nvidia/parakeet-tdt-0.6b-v2"
-    )
-    print("Parakeet TDT model downloaded successfully")
-except ImportError:
-    print("NeMo not installed. Install with: pip install nemo_toolkit[asr]")
-    print("Parakeet TDT will be downloaded on first run")
-except Exception as e:
-    print(f"Error downloading Parakeet TDT: {e}")
-    print("Parakeet TDT will be downloaded on first run")
-EOF
+    download_model \
+        "nvidia/parakeet-tdt-0.6b-v2" \
+        "parakeet-tdt-0.6b-v2" \
+        "4"
 fi
 
 # Sentence transformers (for memory/RAG)
 echo ""
 log_info "=== Embedding Models ==="
-log_info "Downloading sentence transformer for memory system..."
+log_info "Model: sentence-transformers/all-MiniLM-L6-v2 (~90MB)"
+echo ""
+read -p "Pre-download embedding model now? (y/n) " -n 1 -r
+echo
 
-python3 << 'EOF'
-try:
-    from sentence_transformers import SentenceTransformer
-    print("Downloading all-MiniLM-L6-v2 embedding model...")
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    print("Embedding model downloaded successfully")
-except Exception as e:
-    print(f"Error downloading embeddings: {e}")
-    print("Embeddings will be downloaded on first run")
-EOF
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    log_info "Pre-downloading embedding model..."
+    download_model \
+        "sentence-transformers/all-MiniLM-L6-v2" \
+        "all-MiniLM-L6-v2" \
+        "0.1"
+fi
 
 # Summary
 echo ""
