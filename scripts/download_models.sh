@@ -88,19 +88,19 @@ read -p "Enter choice (1-4): " llm_choice
 case $llm_choice in
     1)
         download_model \
-            "Qwen/Qwen3-30B-A3B-Instruct-AWQ" \
+            "QuixiAI/Qwen3-30B-A3B-AWQ" \
             "qwen3-30b-a3b-awq" \
             "20"
         ;;
     2)
         download_model \
-            "Qwen/Qwen3-14B-Instruct-AWQ" \
+            "Qwen/Qwen3-14B-AWQ" \
             "qwen3-14b-awq" \
             "8"
         ;;
     3)
         download_model \
-            "Qwen/Qwen3-8B-Instruct-AWQ" \
+            "Qwen/Qwen3-8B-AWQ" \
             "qwen3-8b-awq" \
             "5"
         ;;
