@@ -5,12 +5,15 @@ Provides high-quality TTS with streaming support and voice cloning.
 Fish Speech 1.5 (OpenAudio S1) is a state-of-the-art TTS model ranked #1 on TTS-Arena2.
 
 Supports both local inference and cloud API modes.
+Local inference requires: pip install -e ".[cu129]" from fish-speech repo
+VRAM requirement: ~12GB for inference
 """
 
 import asyncio
 import os
 import tempfile
 import time
+from pathlib import Path
 from typing import AsyncIterator
 
 import numpy as np
@@ -27,9 +30,9 @@ class FishSpeechTTS(BaseTTS):
     - Streaming output with low latency
     - Voice cloning from reference audio
     - Emotion control via text markers
-    - Both local inference and cloud API modes
+    - Local inference (default) and cloud API modes
 
-    Memory usage: ~2-4GB VRAM for local inference
+    Memory usage: ~12GB VRAM for local inference
     Latency: ~50-100ms first chunk (streaming mode)
     """
 
@@ -40,6 +43,10 @@ class FishSpeechTTS(BaseTTS):
         api_key: str | None = None,
         reference_id: str | None = None,
         model: str = "speech-1.5",
+        model_path: str | None = None,
+        device: str = "cuda",
+        half_precision: bool = True,
+        compile_model: bool = False,
         **kwargs,
     ):
         """
@@ -47,10 +54,14 @@ class FishSpeechTTS(BaseTTS):
 
         Args:
             sample_rate: Output sample rate (default 44100 for Fish Speech)
-            use_api: Whether to use cloud API (False for local inference)
+            use_api: Whether to use cloud API (False for local inference - DEFAULT)
             api_key: Fish Audio API key (required if use_api=True)
             reference_id: Default voice reference ID for synthesis
             model: Model version to use (speech-1.5 recommended)
+            model_path: Path to local model weights (auto-downloads if not specified)
+            device: Device to run inference on (cuda, cpu)
+            half_precision: Use FP16 for faster inference (default True)
+            compile_model: Use torch.compile for faster inference (Linux only)
             **kwargs: Additional arguments
         """
         super().__init__(sample_rate, **kwargs)
@@ -58,8 +69,15 @@ class FishSpeechTTS(BaseTTS):
         self.api_key = api_key or os.environ.get("FISH_API_KEY")
         self.reference_id = reference_id
         self.model = model
+        self.model_path = model_path
+        self.device = device
+        self.half_precision = half_precision
+        self.compile_model = compile_model
         self._client = None
+        self._local_model = None
+        self._tokenizer = None
         self._cloned_voices: dict[str, str] = {}
+        self._reference_audio_cache: dict[str, np.ndarray] = {}
         self._first_chunk_latency_ms: float = 0.0
 
     async def load(self) -> None:
@@ -82,22 +100,94 @@ class FishSpeechTTS(BaseTTS):
                     )
                 self._client = FishAudio(api_key=self.api_key)
             else:
-                self._client = None
-                self.logger.info(
-                    "Fish Speech local inference mode - synthesis will use direct model calls"
-                )
+                # Load local Fish Speech model
+                await self._load_local_model()
 
             self._loaded = True
             load_time = time.time() - start_time
             self.logger.info(f"Fish Speech TTS loaded in {load_time:.2f}s")
 
         except ImportError as e:
-            self.logger.error(f"Failed to import Fish Audio SDK: {e}")
-            self.logger.error("Install with: pip install fish-audio-sdk")
+            self.logger.error(f"Failed to import Fish Speech: {e}")
+            self.logger.error(
+                "Install fish-speech for local inference: "
+                "git clone https://github.com/fishaudio/fish-speech && "
+                "cd fish-speech && pip install -e '.[cu129]'"
+            )
             raise
         except Exception as e:
             self.logger.error(f"Failed to load Fish Speech TTS: {e}")
             raise
+
+    async def _load_local_model(self) -> None:
+        """Load local Fish Speech model for inference."""
+        import torch
+
+        loop = asyncio.get_event_loop()
+
+        def _load_sync():
+            # Import Fish Speech components
+            try:
+                from fish_speech.models.text2semantic.inference import (
+                    load_model as load_llama_model,
+                )
+                from fish_speech.models.vqgan.inference import (
+                    load_model as load_vqgan_model,
+                )
+            except ImportError:
+                # Try alternative import path for newer versions
+                try:
+                    from tools.inference import load_model
+                    return load_model(
+                        checkpoint_path=self.model_path,
+                        device=self.device,
+                        half=self.half_precision,
+                        compile=self.compile_model,
+                    )
+                except ImportError:
+                    raise ImportError(
+                        "Fish Speech not installed. Install with: "
+                        "git clone https://github.com/fishaudio/fish-speech && "
+                        "cd fish-speech && pip install -e '.[cu129]'"
+                    )
+
+            # Determine model path
+            model_path = self.model_path
+            if model_path is None:
+                # Use HuggingFace hub to download model
+                from huggingface_hub import hf_hub_download, snapshot_download
+
+                self.logger.info("Downloading Fish Speech model from HuggingFace...")
+                model_dir = snapshot_download(
+                    repo_id="fishaudio/openaudio-s1-mini",
+                    allow_patterns=["*.pth", "*.json", "*.yaml", "config.*"],
+                )
+                model_path = model_dir
+
+            self.logger.info(f"Loading Fish Speech model from {model_path}")
+
+            # Load the models
+            device = torch.device(self.device)
+            dtype = torch.float16 if self.half_precision else torch.float32
+
+            # Load semantic model (LLaMA-based)
+            llama_model = load_llama_model(
+                checkpoint_path=f"{model_path}/llama",
+                device=device,
+                dtype=dtype,
+                compile=self.compile_model,
+            )
+
+            # Load VQGAN vocoder
+            vqgan_model = load_vqgan_model(
+                checkpoint_path=f"{model_path}/vqgan",
+                device=device,
+            )
+
+            return {"llama": llama_model, "vqgan": vqgan_model, "device": device, "dtype": dtype}
+
+        self._local_model = await loop.run_in_executor(None, _load_sync)
+        self.logger.info("Fish Speech local model loaded successfully")
 
     async def unload(self) -> None:
         """Unload the TTS model/client."""
@@ -107,7 +197,10 @@ class FishSpeechTTS(BaseTTS):
         self.logger.info("Unloading Fish Speech TTS")
 
         self._client = None
+        self._local_model = None
+        self._tokenizer = None
         self._cloned_voices.clear()
+        self._reference_audio_cache.clear()
 
         import torch
 
@@ -203,20 +296,118 @@ class FishSpeechTTS(BaseTTS):
         speed: float,
     ) -> np.ndarray:
         """
-        Synthesize using local inference.
+        Synthesize using local Fish Speech inference.
 
-        For local inference without the full fish-speech repo,
-        we fall back to a simple placeholder that generates silence.
-        In production, this would use the local fish-speech model.
+        Uses the locally loaded Fish Speech model for TTS generation.
+        Supports voice cloning via reference audio.
         """
-        self.logger.warning(
-            "Local Fish Speech inference requires the fish-speech repository. "
-            "Using API mode is recommended. Set TTS__USE_API=true and provide FISH_API_KEY."
-        )
+        if self._local_model is None:
+            raise RuntimeError(
+                "Local model not loaded. Ensure fish-speech is installed: "
+                "git clone https://github.com/fishaudio/fish-speech && "
+                "cd fish-speech && pip install -e '.[cu129]'"
+            )
 
-        duration_estimate = len(text.split()) * 0.3
-        num_samples = int(duration_estimate * self.sample_rate)
-        return np.zeros(num_samples, dtype=np.float32)
+        loop = asyncio.get_event_loop()
+
+        def _synthesize_sync():
+            import torch
+
+            # Get reference audio if specified
+            reference_audio = None
+            if reference_id and reference_id in self._reference_audio_cache:
+                reference_audio = self._reference_audio_cache[reference_id]
+            elif reference_id and reference_id in self._cloned_voices:
+                # Load reference audio from file path
+                voice_path = self._cloned_voices[reference_id]
+                if os.path.exists(voice_path):
+                    import soundfile as sf
+                    reference_audio, _ = sf.read(voice_path)
+                    self._reference_audio_cache[reference_id] = reference_audio
+
+            try:
+                # Try using the fish_speech inference API
+                from fish_speech.inference import inference
+
+                # Run inference
+                audio = inference(
+                    text=text,
+                    model=self._local_model,
+                    reference_audio=reference_audio,
+                    speed=speed,
+                )
+                return np.array(audio, dtype=np.float32)
+
+            except ImportError:
+                # Fallback: Try using the tools.inference module
+                try:
+                    from tools.inference import synthesize
+
+                    audio = synthesize(
+                        text=text,
+                        model=self._local_model,
+                        reference_audio=reference_audio,
+                        speed=speed,
+                    )
+                    return np.array(audio, dtype=np.float32)
+
+                except ImportError:
+                    # Last resort: Use the model components directly
+                    try:
+                        llama = self._local_model.get("llama")
+                        vqgan = self._local_model.get("vqgan")
+                        device = self._local_model.get("device")
+                        dtype = self._local_model.get("dtype")
+
+                        if llama is None or vqgan is None:
+                            raise RuntimeError("Model components not loaded properly")
+
+                        # Generate semantic tokens from text
+                        with torch.no_grad():
+                            # Tokenize text
+                            from fish_speech.text import clean_text, g2p
+
+                            cleaned_text = clean_text(text)
+                            phonemes = g2p(cleaned_text)
+
+                            # Generate semantic tokens
+                            semantic_tokens = llama.generate(
+                                phonemes,
+                                reference_audio=reference_audio,
+                                max_new_tokens=2048,
+                            )
+
+                            # Decode to audio using VQGAN
+                            audio = vqgan.decode(semantic_tokens)
+
+                        # Resample if needed
+                        audio_np = audio.cpu().numpy().squeeze()
+
+                        # Apply speed adjustment
+                        if speed != 1.0:
+                            import scipy.signal
+                            new_length = int(len(audio_np) / speed)
+                            audio_np = scipy.signal.resample(audio_np, new_length)
+
+                        return audio_np.astype(np.float32)
+
+                    except Exception as e:
+                        self.logger.error(f"Local synthesis failed: {e}")
+                        raise RuntimeError(
+                            f"Fish Speech local inference failed: {e}. "
+                            "Ensure fish-speech is properly installed."
+                        )
+
+        audio = await loop.run_in_executor(None, _synthesize_sync)
+
+        # Resample to target sample rate if needed (Fish Speech outputs at 44100Hz)
+        fish_speech_sr = 44100
+        if self.sample_rate != fish_speech_sr:
+            import scipy.signal
+            num_samples = int(len(audio) * self.sample_rate / fish_speech_sr)
+            audio = scipy.signal.resample(audio, num_samples)
+
+        return audio
 
     async def synthesize_stream(
         self,
