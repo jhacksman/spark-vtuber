@@ -131,6 +131,15 @@ preflight_checks() {
         exit 1
     fi
 
+    # Check Python development headers
+    PYTHON_INCLUDE="/usr/include/python${PYTHON_VERSION}"
+    if [ ! -f "${PYTHON_INCLUDE}/Python.h" ]; then
+        log_warning "Python development headers not found at ${PYTHON_INCLUDE}"
+        log_info "Will install python3-dev and python${PYTHON_VERSION}-dev during system dependencies"
+    else
+        log_info "Python development headers: OK"
+    fi
+
     log_success "Pre-flight checks passed!"
 }
 
@@ -160,6 +169,8 @@ install_system_deps() {
         cmake \
         ninja-build \
         git \
+        python3-dev \
+        python3.12-dev \
         zlib1g-dev \
         libncurses5-dev \
         libgdbm-dev \
