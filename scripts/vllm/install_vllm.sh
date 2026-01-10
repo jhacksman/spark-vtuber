@@ -160,6 +160,8 @@ install_system_deps() {
         cmake \
         ninja-build \
         git \
+        python3-dev \
+        python3.12-dev \
         zlib1g-dev \
         libncurses5-dev \
         libgdbm-dev \
