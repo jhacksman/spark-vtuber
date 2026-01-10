@@ -75,14 +75,14 @@ download_model() {
     log_info "$MODEL_NAME downloaded successfully"
 }
 
-# Download LLM (Llama 3.1 70B AWQ)
+# Download LLM (Qwen3 MoE models)
 log_info "=== LLM Models ==="
 
 echo ""
 echo "Choose LLM model to download:"
-echo "  1) Llama 3.1 70B AWQ (40GB) - Recommended for DGX Spark"
-echo "  2) Llama 3.1 30B AWQ (16GB) - Smaller, faster"
-echo "  3) Llama 3.1 8B AWQ (5GB) - Minimal, for testing"
+echo "  1) Qwen3-30B-A3B AWQ (15-20GB) - Recommended for DGX Spark (MoE: 30B total, 3B active)"
+echo "  2) Qwen3-14B AWQ (8GB) - Smaller, faster"
+echo "  3) Qwen3-8B AWQ (5GB) - Minimal, for testing"
 echo "  4) Skip LLM download"
 echo ""
 read -p "Enter choice (1-4): " llm_choice
@@ -90,20 +90,20 @@ read -p "Enter choice (1-4): " llm_choice
 case $llm_choice in
     1)
         download_model \
-            "TheBloke/Llama-3.1-70B-Instruct-AWQ" \
-            "llama-3.1-70b-awq" \
-            "40"
+            "Qwen/Qwen3-30B-A3B-Instruct-AWQ" \
+            "qwen3-30b-a3b-awq" \
+            "20"
         ;;
     2)
         download_model \
-            "TheBloke/Llama-3.1-30B-Instruct-AWQ" \
-            "llama-3.1-30b-awq" \
-            "16"
+            "Qwen/Qwen3-14B-Instruct-AWQ" \
+            "qwen3-14b-awq" \
+            "8"
         ;;
     3)
         download_model \
-            "TheBloke/Llama-3.1-8B-Instruct-AWQ" \
-            "llama-3.1-8b-awq" \
+            "Qwen/Qwen3-8B-Instruct-AWQ" \
+            "qwen3-8b-awq" \
             "5"
         ;;
     4)
@@ -194,20 +194,20 @@ log_info "Downloaded models are stored in ./models/"
 echo ""
 log_info "Update your .env file to use downloaded models:"
 echo ""
-echo "For 70B model:"
-echo "  LLM__MODEL_NAME=./models/llama-3.1-70b-awq"
+echo "For Qwen3-30B-A3B model (recommended):"
+echo "  LLM__MODEL_NAME=./models/qwen3-30b-a3b-awq"
 echo ""
-echo "For 30B model:"
-echo "  LLM__MODEL_NAME=./models/llama-3.1-30b-awq"
+echo "For Qwen3-14B model:"
+echo "  LLM__MODEL_NAME=./models/qwen3-14b-awq"
 echo ""
-echo "For 8B model:"
-echo "  LLM__MODEL_NAME=./models/llama-3.1-8b-awq"
+echo "For Qwen3-8B model:"
+echo "  LLM__MODEL_NAME=./models/qwen3-8b-awq"
 echo ""
 
 log_warn "Remember to verify you have enough GPU memory:"
-echo "  - 70B model: requires ~40GB GPU memory"
-echo "  - 30B model: requires ~16GB GPU memory"
-echo "  - 8B model: requires ~5GB GPU memory"
+echo "  - Qwen3-30B-A3B model: requires ~15-20GB GPU memory (MoE architecture)"
+echo "  - Qwen3-14B model: requires ~8GB GPU memory"
+echo "  - Qwen3-8B model: requires ~5GB GPU memory"
 echo ""
 
 exit 0

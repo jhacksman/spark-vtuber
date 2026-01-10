@@ -117,7 +117,7 @@ uv pip install -e ".[dev]"
 bash scripts/download_models.sh
 
 # This downloads:
-# - Llama 3.1 70B AWQ (quantized)
+# - Qwen3-30B-A3B AWQ (quantized MoE model)
 # - Coqui TTS model
 # - Whisper Large-v3
 # - Sentence transformer for embeddings
@@ -129,13 +129,13 @@ bash scripts/download_models.sh
 # Create models directory
 mkdir -p models
 
-# Download Llama 3.1 70B AWQ
+# Download Qwen3-30B-A3B AWQ
 # Using HuggingFace CLI (requires login)
 huggingface-cli login  # Enter your HF token
 
 huggingface-cli download \
-    TheBloke/Llama-3.1-70B-Instruct-AWQ \
-    --local-dir models/llama-3.1-70b-awq \
+    Qwen/Qwen3-30B-A3B-Instruct-AWQ \
+    --local-dir models/qwen3-30b-a3b-awq \
     --local-dir-use-symlinks False
 
 # Coqui TTS models download automatically on first use
@@ -157,7 +157,7 @@ nano .env  # or your preferred editor
 
 ```bash
 # LLM Configuration
-LLM__MODEL_NAME=./models/llama-3.1-70b-awq
+LLM__MODEL_NAME=./models/qwen3-30b-a3b-awq
 LLM__QUANTIZATION=awq
 LLM__GPU_MEMORY_UTILIZATION=0.70
 LLM__CONTEXT_LENGTH=8192
@@ -429,7 +429,7 @@ LLM__GPU_MEMORY_UTILIZATION=0.60  # from 0.70
 LLM__CONTEXT_LENGTH=4096  # from 8192
 
 # Use smaller model variant
-LLM__MODEL_NAME=./models/llama-3.1-30b-awq  # Instead of 70B
+LLM__MODEL_NAME=./models/qwen3-14b-awq  # Instead of 30B-A3B
 ```
 
 ### Latency Optimization
@@ -519,8 +519,8 @@ Authentication pending - please accept in VTube Studio
 3. Resume interrupted downloads:
    ```bash
    # HuggingFace CLI automatically resumes
-   huggingface-cli download TheBloke/Llama-3.1-70B-Instruct-AWQ \
-       --local-dir models/llama-3.1-70b-awq \
+   huggingface-cli download Qwen/Qwen3-30B-A3B-Instruct-AWQ \
+       --local-dir models/qwen3-30b-a3b-awq \
        --resume-download
    ```
 

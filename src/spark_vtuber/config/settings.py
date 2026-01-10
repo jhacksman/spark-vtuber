@@ -15,7 +15,7 @@ class LLMSettings(BaseSettings):
     """LLM configuration settings."""
 
     model_name: str = Field(
-        default="meta-llama/Llama-3.1-70B-Instruct",
+        default="Qwen/Qwen3-30B-A3B-Instruct",
         description="HuggingFace model name or local path",
     )
     quantization: Literal["none", "awq", "gptq", "bitsandbytes_4bit"] = Field(
