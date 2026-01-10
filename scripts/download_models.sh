@@ -25,16 +25,15 @@ echo ""
 mkdir -p models
 cd models
 
-# Check for HuggingFace CLI (use python -m for better compatibility with venvs)
-HF_CLI="python -m huggingface_hub.cli.huggingface_cli"
-if ! $HF_CLI --help &> /dev/null; then
-    log_error "huggingface-hub not found"
-    log_info "Install with: uv pip install huggingface-hub"
+# Check for HuggingFace CLI (hf command from huggingface_hub)
+if ! command -v hf &> /dev/null; then
+    log_error "hf command not found"
+    log_info "Install with: uv pip install huggingface-hub[cli]"
     exit 1
 fi
 
 # Check if logged in to HuggingFace
-if ! $HF_CLI whoami &> /dev/null; then
+if ! hf whoami &> /dev/null; then
     log_warn "Not logged in to HuggingFace"
     log_info "Some models may require authentication"
     log_info "Run: huggingface-cli login"
@@ -67,7 +66,7 @@ download_model() {
         rm -rf "$LOCAL_DIR"
     fi
 
-    $HF_CLI download \
+    hf download \
         "$MODEL_NAME" \
         --local-dir "$LOCAL_DIR" \
         --local-dir-use-symlinks False \
