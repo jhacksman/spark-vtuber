@@ -175,8 +175,9 @@ TTS__USE_API=false
 TTS__DEVICE=cuda
 TTS__HALF_PRECISION=true
 
-# STT Configuration
-STT__MODEL_SIZE=large-v3
+# STT Configuration (Parakeet TDT - ultra-fast, low-latency)
+STT__ENGINE=parakeet
+STT__MODEL_NAME=nvidia/parakeet-tdt-0.6b-v2
 STT__DEVICE=cuda
 
 # Memory Configuration
