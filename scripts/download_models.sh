@@ -25,15 +25,16 @@ echo ""
 mkdir -p models
 cd models
 
-# Check for HuggingFace CLI
-if ! command -v huggingface-cli &> /dev/null; then
-    log_error "huggingface-cli not found"
+# Check for HuggingFace CLI (use python -m for better compatibility with venvs)
+HF_CLI="python -m huggingface_hub.cli.huggingface_cli"
+if ! $HF_CLI --help &> /dev/null; then
+    log_error "huggingface-hub not found"
     log_info "Install with: uv pip install huggingface-hub"
     exit 1
 fi
 
 # Check if logged in to HuggingFace
-if ! huggingface-cli whoami &> /dev/null; then
+if ! $HF_CLI whoami &> /dev/null; then
     log_warn "Not logged in to HuggingFace"
     log_info "Some models may require authentication"
     log_info "Run: huggingface-cli login"
@@ -66,7 +67,7 @@ download_model() {
         rm -rf "$LOCAL_DIR"
     fi
 
-    huggingface-cli download \
+    $HF_CLI download \
         "$MODEL_NAME" \
         --local-dir "$LOCAL_DIR" \
         --local-dir-use-symlinks False \
@@ -115,56 +116,61 @@ case $llm_choice in
         ;;
 esac
 
-# TTS models (download on first use)
+# TTS models (Fish Speech 1.5)
 echo ""
-log_info "=== TTS Models ==="
-log_info "Coqui TTS models will download automatically on first use"
-log_info "Default model: tts_models/en/ljspeech/tacotron2-DDC (~500MB)"
+log_info "=== TTS Models (Fish Speech 1.5) ==="
+log_info "Fish Speech model will download automatically on first use"
+log_info "Default model: fishaudio/openaudio-s1-mini (~12GB)"
 echo ""
-read -p "Pre-download TTS models now? (y/n) " -n 1 -r
+read -p "Pre-download Fish Speech model now? (y/n) " -n 1 -r
 echo
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    log_info "Pre-downloading TTS models..."
+    log_info "Pre-downloading Fish Speech model..."
 
-    # This will be downloaded by TTS library on first use
-    # We can trigger it with a simple Python script
     python3 << 'EOF'
-import os
-os.environ['COQUI_TOS_AGREED'] = '1'
-
 try:
-    from TTS.api import TTS
-    print("Downloading default TTS model...")
-    tts = TTS(model_name="tts_models/en/ljspeech/tacotron2-DDC")
-    print("TTS model downloaded successfully")
+    from huggingface_hub import snapshot_download
+    print("Downloading Fish Speech model (fishaudio/openaudio-s1-mini)...")
+    snapshot_download(
+        repo_id="fishaudio/openaudio-s1-mini",
+        local_dir="fish-speech-model",
+        local_dir_use_symlinks=False
+    )
+    print("Fish Speech model downloaded successfully")
 except Exception as e:
-    print(f"Error downloading TTS: {e}")
-    print("TTS will be downloaded on first run")
+    print(f"Error downloading Fish Speech: {e}")
+    print("Fish Speech will be downloaded on first run")
 EOF
 fi
 
-# STT models (download on first use)
+# STT models (Parakeet TDT 0.6B V2)
 echo ""
-log_info "=== STT Models ==="
-log_info "Whisper models will download automatically on first use"
-log_info "Default model: large-v3 (~3GB)"
+log_info "=== STT Models (Parakeet TDT 0.6B V2) ==="
+log_info "Parakeet TDT model will download automatically on first use via NeMo"
+log_info "Model: nvidia/parakeet-tdt-0.6b-v2 (~4GB)"
+log_info "16x faster than Whisper Turbo, 6.05% WER"
 echo ""
-read -p "Pre-download Whisper model now? (y/n) " -n 1 -r
+read -p "Pre-download Parakeet TDT model now? (y/n) " -n 1 -r
 echo
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    log_info "Pre-downloading Whisper model..."
+    log_info "Pre-downloading Parakeet TDT model..."
 
     python3 << 'EOF'
 try:
-    from faster_whisper import WhisperModel
-    print("Downloading Whisper large-v3...")
-    model = WhisperModel("large-v3", device="cpu", compute_type="int8")
-    print("Whisper model downloaded successfully")
+    import nemo.collections.asr as nemo_asr
+    print("Downloading Parakeet TDT 0.6B V2...")
+    model = nemo_asr.models.ASRModel.from_pretrained(
+        model_name="nvidia/parakeet-tdt-0.6b-v2"
+    )
+    print("Parakeet TDT model downloaded successfully")
+except ImportError:
+    print("NeMo not installed. Install with: pip install nemo_toolkit[asr]")
+    print("Parakeet TDT will be downloaded on first run")
 except Exception as e:
-    print(f"Error downloading Whisper: {e}")
-    print("Whisper will be downloaded on first run")
+    print(f"Error downloading Parakeet TDT: {e}")
+    print("Parakeet TDT will be downloaded on first run")
 EOF
 fi
 
