@@ -28,15 +28,15 @@ cd models
 # Check for HuggingFace CLI (hf command from huggingface_hub)
 if ! command -v hf &> /dev/null; then
     log_error "hf command not found"
-    log_info "Install with: uv pip install huggingface-hub[cli]"
+    log_info "Install with: uv pip install huggingface-hub"
     exit 1
 fi
 
 # Check if logged in to HuggingFace
-if ! hf whoami &> /dev/null; then
+if ! hf auth whoami &> /dev/null; then
     log_warn "Not logged in to HuggingFace"
     log_info "Some models may require authentication"
-    log_info "Run: huggingface-cli login"
+    log_info "Run: hf auth login"
     echo ""
     read -p "Continue anyway? (y/n) " -n 1 -r
     echo
@@ -68,9 +68,7 @@ download_model() {
 
     hf download \
         "$MODEL_NAME" \
-        --local-dir "$LOCAL_DIR" \
-        --local-dir-use-symlinks False \
-        --resume-download
+        --local-dir "$LOCAL_DIR"
 
     log_info "$MODEL_NAME downloaded successfully"
 }
@@ -133,8 +131,7 @@ try:
     print("Downloading Fish Speech model (fishaudio/openaudio-s1-mini)...")
     snapshot_download(
         repo_id="fishaudio/openaudio-s1-mini",
-        local_dir="fish-speech-model",
-        local_dir_use_symlinks=False
+        local_dir="fish-speech-model"
     )
     print("Fish Speech model downloaded successfully")
 except Exception as e:
@@ -192,7 +189,7 @@ EOF
 # Summary
 echo ""
 echo "================================================"
-log_info "Model download complete! 🎉"
+log_info "Model download complete!"
 echo "================================================"
 echo ""
 log_info "Downloaded models are stored in ./models/"
