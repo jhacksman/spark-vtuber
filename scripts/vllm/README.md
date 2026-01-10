@@ -18,8 +18,11 @@ The standard vLLM pip package doesn't support DGX Spark's ARM64 + Blackwell arch
 
 - NVIDIA DGX Spark with GB10 GPU
 - CUDA 13.0+ toolkit installed
+- Python 3.12 with development headers (python3-dev, python3.12-dev)
 - ~50GB free disk space during build (final installation ~10-15GB)
 - ~20-30 minutes build time
+
+**Note:** The installer will automatically install system dependencies including python3-dev if not present.
 
 ## Installation
 
@@ -79,5 +82,17 @@ LLM__MODEL_NAME=./models/qwen3-30b-a3b-awq
 - Python: 3.12
 
 ## Troubleshooting
+
+### CMake Error: "Could NOT find Python3 (missing: Development.Module)"
+
+This error means Python development headers are not installed. The installer handles this automatically, but if you see this error:
+
+```bash
+sudo apt-get install -y python3-dev python3.12-dev
+```
+
+Then re-run the vLLM installation script.
+
+### Other Issues
 
 See the [NVIDIA DGX Spark vLLM Troubleshooting Guide](https://build.nvidia.com/spark/vllm/troubleshooting) for common issues.
