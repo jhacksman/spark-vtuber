@@ -119,7 +119,7 @@ bash scripts/download_models.sh
 # This downloads:
 # - Qwen3-30B-A3B AWQ (quantized MoE model)
 # - Fish Speech 1.5 model (openaudio-s1-mini)
-# - Whisper Large-v3
+# - Parakeet TDT 0.6B V2 (ultra-fast STT)
 # - Sentence transformer for embeddings
 ```
 
@@ -131,12 +131,11 @@ mkdir -p models
 
 # Download Qwen3-30B-A3B AWQ
 # Using HuggingFace CLI (requires login)
-huggingface-cli login  # Enter your HF token
+hf auth login  # Enter your HF token
 
-huggingface-cli download \
-    Qwen/Qwen3-30B-A3B-Instruct-AWQ \
-    --local-dir models/qwen3-30b-a3b-awq \
-    --local-dir-use-symlinks False
+hf download \
+    QuixiAI/Qwen3-30B-A3B-AWQ \
+    --local-dir models/qwen3-30b-a3b-awq
 
 # Fish Speech 1.5 setup (local inference)
 git clone https://github.com/fishaudio/fish-speech
@@ -145,9 +144,10 @@ cd ..
 
 # Fish Speech model downloads automatically from HuggingFace on first use
 # Or manually download:
-# huggingface-cli download fishaudio/openaudio-s1-mini --local-dir models/fish-speech
+hf download fishaudio/openaudio-s1-mini --local-dir models/fish-speech
 
-# Whisper models download automatically on first use
+# Parakeet TDT model (ultra-fast STT)
+hf download nvidia/parakeet-tdt-0.6b-v2 --local-dir models/parakeet-tdt-0.6b-v2
 ```
 
 ### Step 6: Configure Environment
@@ -450,11 +450,11 @@ For better response times:
 # Reduce temperature for faster sampling
 LLM__TEMPERATURE=0.5  # from 0.7
 
-# Use smaller TTS model
-TTS__MODEL_NAME=tts_models/en/ljspeech/vits
+# Use half precision for TTS (faster inference)
+TTS__HALF_PRECISION=true
 
-# Disable STT VAD if not needed
-STT__VAD_ENABLED=false
+# Parakeet TDT is already ultra-fast (3386x RTFx)
+# No VAD setting needed - it's built into the model
 ```
 
 ---
@@ -471,7 +471,7 @@ torch.cuda.OutOfMemoryError: CUDA out of memory
 **Solutions:**
 1. Check memory usage: `nvidia-smi`
 2. Reduce `LLM__GPU_MEMORY_UTILIZATION` to 0.60
-3. Use smaller model (30B instead of 70B)
+3. Use smaller model (Qwen3-14B-AWQ instead of 30B-A3B)
 4. Close other GPU applications
 
 ### Issue: vLLM Import Error
@@ -528,10 +528,9 @@ Authentication pending - please accept in VTube Studio
 
 3. Resume interrupted downloads:
    ```bash
-   # HuggingFace CLI automatically resumes
-   huggingface-cli download Qwen/Qwen3-30B-A3B-Instruct-AWQ \
-       --local-dir models/qwen3-30b-a3b-awq \
-       --resume-download
+   # HuggingFace CLI automatically resumes partial downloads
+   hf download QuixiAI/Qwen3-30B-A3B-AWQ \
+       --local-dir models/qwen3-30b-a3b-awq
    ```
 
 ---
