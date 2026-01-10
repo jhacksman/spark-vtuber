@@ -1,0 +1,200 @@
+"""
+Configuration settings for Spark VTuber.
+
+Uses Pydantic Settings for environment variable loading and validation.
+"""
+
+from pathlib import Path
+from typing import Literal
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class LLMSettings(BaseSettings):
+    """LLM configuration settings."""
+
+    model_name: str = Field(
+        default="meta-llama/Llama-3.1-70B-Instruct",
+        description="HuggingFace model name or local path",
+    )
+    quantization: Literal["none", "4bit", "8bit"] = Field(
+        default="4bit",
+        description="Quantization method for memory efficiency",
+    )
+    max_tokens: int = Field(default=2048, description="Maximum tokens to generate")
+    temperature: float = Field(default=0.7, description="Sampling temperature")
+    top_p: float = Field(default=0.9, description="Top-p sampling parameter")
+    context_length: int = Field(default=8192, description="Maximum context length")
+    gpu_memory_utilization: float = Field(
+        default=0.85,
+        description="Fraction of GPU memory to use",
+    )
+
+    model_config = SettingsConfigDict(env_prefix="LLM_")
+
+
+class TTSSettings(BaseSettings):
+    """Text-to-speech configuration settings."""
+
+    engine: Literal["styletts2", "fish_speech", "coqui"] = Field(
+        default="coqui",
+        description="TTS engine to use",
+    )
+    model_name: str = Field(
+        default="tts_models/en/ljspeech/tacotron2-DDC",
+        description="TTS model name",
+    )
+    voice_id: str | None = Field(default=None, description="Voice ID for cloning")
+    sample_rate: int = Field(default=22050, description="Audio sample rate")
+    streaming: bool = Field(default=True, description="Enable streaming synthesis")
+
+    model_config = SettingsConfigDict(env_prefix="TTS_")
+
+
+class STTSettings(BaseSettings):
+    """Speech-to-text configuration settings."""
+
+    model_size: Literal["tiny", "base", "small", "medium", "large-v3"] = Field(
+        default="large-v3",
+        description="Whisper model size",
+    )
+    device: str = Field(default="cuda", description="Device for inference")
+    compute_type: Literal["float16", "int8", "int8_float16"] = Field(
+        default="float16",
+        description="Compute type for inference",
+    )
+    language: str = Field(default="en", description="Language for transcription")
+    vad_enabled: bool = Field(default=True, description="Enable voice activity detection")
+
+    model_config = SettingsConfigDict(env_prefix="STT_")
+
+
+class MemorySettings(BaseSettings):
+    """Memory and RAG configuration settings."""
+
+    chroma_persist_dir: Path = Field(
+        default=Path("./data/chroma"),
+        description="ChromaDB persistence directory",
+    )
+    embedding_model: str = Field(
+        default="all-MiniLM-L6-v2",
+        description="Sentence transformer model for embeddings",
+    )
+    max_memories: int = Field(default=10000, description="Maximum memories to store")
+    retrieval_top_k: int = Field(default=5, description="Number of memories to retrieve")
+    summarization_threshold: int = Field(
+        default=10000,
+        description="Token count to trigger summarization",
+    )
+
+    model_config = SettingsConfigDict(env_prefix="MEMORY_")
+
+
+class AvatarSettings(BaseSettings):
+    """Avatar control configuration settings."""
+
+    vtube_studio_host: str = Field(default="localhost", description="VTube Studio host")
+    vtube_studio_port: int = Field(default=8001, description="VTube Studio WebSocket port")
+    plugin_name: str = Field(default="SparkVTuber", description="Plugin name for VTube Studio")
+    plugin_developer: str = Field(default="SparkVTuber", description="Plugin developer name")
+    lip_sync_enabled: bool = Field(default=True, description="Enable lip sync")
+    expression_enabled: bool = Field(default=True, description="Enable expression control")
+
+    model_config = SettingsConfigDict(env_prefix="AVATAR_")
+
+
+class PersonalitySettings(BaseSettings):
+    """Dual AI personality configuration settings."""
+
+    primary_name: str = Field(default="Spark", description="Primary personality name")
+    primary_lora_path: str | None = Field(
+        default=None,
+        description="Path to primary personality LoRA adapter",
+    )
+    secondary_name: str = Field(default="Shadow", description="Secondary personality name")
+    secondary_lora_path: str | None = Field(
+        default=None,
+        description="Path to secondary personality LoRA adapter",
+    )
+    switch_cooldown: float = Field(
+        default=5.0,
+        description="Minimum seconds between personality switches",
+    )
+
+    model_config = SettingsConfigDict(env_prefix="PERSONALITY_")
+
+
+class ChatSettings(BaseSettings):
+    """Chat integration configuration settings."""
+
+    twitch_enabled: bool = Field(default=False, description="Enable Twitch integration")
+    twitch_channel: str = Field(default="", description="Twitch channel name")
+    twitch_oauth_token: str = Field(default="", description="Twitch OAuth token")
+    youtube_enabled: bool = Field(default=False, description="Enable YouTube integration")
+    youtube_video_id: str = Field(default="", description="YouTube live video ID")
+    youtube_api_key: str = Field(default="", description="YouTube API key")
+    message_queue_size: int = Field(default=100, description="Maximum queued messages")
+    rate_limit_per_minute: int = Field(default=20, description="Max responses per minute")
+
+    model_config = SettingsConfigDict(env_prefix="CHAT_")
+
+
+class GameSettings(BaseSettings):
+    """Game integration configuration settings."""
+
+    minecraft_enabled: bool = Field(default=False, description="Enable Minecraft integration")
+    minecraft_host: str = Field(default="localhost", description="Minecraft server host")
+    minecraft_port: int = Field(default=25565, description="Minecraft server port")
+    minecraft_username: str = Field(default="SparkVTuber", description="Minecraft username")
+    watch_mode_enabled: bool = Field(default=False, description="Enable watch/spectator mode")
+    screen_capture_fps: int = Field(default=2, description="Screen capture FPS for watch mode")
+
+    model_config = SettingsConfigDict(env_prefix="GAME_")
+
+
+class Settings(BaseSettings):
+    """Main application settings."""
+
+    app_name: str = Field(default="SparkVTuber", description="Application name")
+    debug: bool = Field(default=False, description="Enable debug mode")
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(
+        default="INFO",
+        description="Logging level",
+    )
+    data_dir: Path = Field(default=Path("./data"), description="Data directory")
+
+    # Component settings
+    llm: LLMSettings = Field(default_factory=LLMSettings)
+    tts: TTSSettings = Field(default_factory=TTSSettings)
+    stt: STTSettings = Field(default_factory=STTSettings)
+    memory: MemorySettings = Field(default_factory=MemorySettings)
+    avatar: AvatarSettings = Field(default_factory=AvatarSettings)
+    personality: PersonalitySettings = Field(default_factory=PersonalitySettings)
+    chat: ChatSettings = Field(default_factory=ChatSettings)
+    game: GameSettings = Field(default_factory=GameSettings)
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_nested_delimiter="__",
+        extra="ignore",
+    )
+
+    def ensure_directories(self) -> None:
+        """Create necessary directories if they don't exist."""
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.memory.chroma_persist_dir.mkdir(parents=True, exist_ok=True)
+
+
+# Global settings instance
+_settings: Settings | None = None
+
+
+def get_settings() -> Settings:
+    """Get or create the global settings instance."""
+    global _settings
+    if _settings is None:
+        _settings = Settings()
+        _settings.ensure_directories()
+    return _settings
