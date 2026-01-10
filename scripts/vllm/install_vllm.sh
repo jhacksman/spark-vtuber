@@ -135,6 +135,61 @@ preflight_checks() {
 }
 
 ################################################################################
+# Install System Dependencies for Triton Build
+################################################################################
+
+install_system_deps() {
+    print_header "Step 1b/8: Installing System Dependencies for Triton"
+
+    log_info "Installing LLVM, Clang, and build tools required for Triton..."
+    
+    # Check if we have sudo access
+    if ! sudo -n true 2>/dev/null; then
+        log_warning "sudo access required to install system dependencies"
+        log_info "Please enter your password when prompted"
+    fi
+
+    # Install LLVM and Clang (required for Triton)
+    sudo apt-get update
+    sudo apt-get install -y \
+        llvm-17 \
+        clang-17 \
+        lld-17 \
+        libclang-17-dev \
+        build-essential \
+        cmake \
+        ninja-build \
+        git \
+        zlib1g-dev \
+        libncurses5-dev \
+        libgdbm-dev \
+        libnss3-dev \
+        libssl-dev \
+        libreadline-dev \
+        libffi-dev \
+        libsqlite3-dev \
+        wget \
+        libbz2-dev
+
+    # Set up LLVM alternatives so clang/llvm commands work
+    if [ -f /usr/bin/clang-17 ]; then
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 100
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-17 100
+        sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-17 100
+        sudo update-alternatives --install /usr/bin/lld lld /usr/bin/lld-17 100
+        log_success "LLVM 17 configured as default"
+    fi
+
+    # Verify installations
+    log_info "Verifying installations..."
+    clang --version || log_warning "clang not found after installation"
+    cmake --version || log_warning "cmake not found after installation"
+    ninja --version || log_warning "ninja not found after installation"
+
+    log_success "System dependencies installed!"
+}
+
+################################################################################
 # Install uv Package Manager
 ################################################################################
 
@@ -550,6 +605,7 @@ main() {
     echo ""
 
     preflight_checks
+    install_system_deps
     install_uv
     create_venv
     install_pytorch
