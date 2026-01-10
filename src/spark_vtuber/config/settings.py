@@ -101,6 +101,27 @@ class AvatarSettings(BaseSettings):
     lip_sync_enabled: bool = Field(default=True, description="Enable lip sync")
     expression_enabled: bool = Field(default=True, description="Enable expression control")
 
+    dual_avatar_enabled: bool = Field(
+        default=False,
+        description="Enable dual avatar mode (requires VNet Multiplayer Collab)",
+    )
+    primary_avatar_port: int = Field(
+        default=8001,
+        description="VTube Studio port for primary avatar (Spark)",
+    )
+    secondary_avatar_port: int = Field(
+        default=8002,
+        description="VTube Studio port for secondary avatar (Shadow)",
+    )
+    primary_avatar_position: Literal["left", "center", "right"] = Field(
+        default="left",
+        description="Preferred position for primary avatar (VNet handles actual positioning)",
+    )
+    secondary_avatar_position: Literal["left", "center", "right"] = Field(
+        default="right",
+        description="Preferred position for secondary avatar (VNet handles actual positioning)",
+    )
+
     model_config = SettingsConfigDict(env_prefix="AVATAR_")
 
 

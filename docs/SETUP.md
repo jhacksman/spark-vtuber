@@ -287,6 +287,73 @@ uv run spark-vtuber test-tts "Hello world" --output test.wav
    "
    ```
 
+### VNet Multiplayer Collab Setup (Dual Avatar Mode)
+
+Enable both AI personalities (Spark and Shadow) to be visible on screen simultaneously using VTube Studio's VNet Multiplayer Collab plugin.
+
+#### Requirements
+
+- **VTube Studio Pro** ($14.99)
+- **VNet Multiplayer Collab** ($20.00) - Available in VTube Studio
+- **Two Live2D models** (one for each personality)
+
+#### Configuration Steps
+
+1. **Install VNet in VTube Studio**
+   - Open VTube Studio
+   - Settings → Plugins → Install VNet Multiplayer Collab
+   - Restart VTube Studio
+
+2. **Launch Two VTube Studio Instances**
+
+   **Instance 1 (Primary - Spark):**
+   - Open VTube Studio normally
+   - Settings → Plugins → Set port to 8001
+   - Load your primary Live2D model (Spark)
+
+   **Instance 2 (Secondary - Shadow):**
+   - Launch a second VTube Studio instance
+   - Settings → Plugins → Set port to 8002
+   - Load your secondary Live2D model (Shadow)
+
+   > **Tip:** Use the portable version or separate installations to run multiple instances.
+
+3. **Enable VNet in Both Instances**
+   - In both VTube Studio windows:
+     - Settings → VNet → Enable VNet
+     - Configure positions (left for primary, right for secondary)
+     - Connect both to the same VNet session
+
+4. **Update `.env` Configuration**
+   ```bash
+   AVATAR__DUAL_AVATAR_ENABLED=true
+   AVATAR__PRIMARY_AVATAR_PORT=8001
+   AVATAR__SECONDARY_AVATAR_PORT=8002
+   AVATAR__PRIMARY_AVATAR_POSITION=left
+   AVATAR__SECONDARY_AVATAR_POSITION=right
+   ```
+
+5. **Run with Dual Avatar Mode**
+   ```bash
+   uv run spark-vtuber run --dual-avatar
+   ```
+
+#### Troubleshooting VNet
+
+**Issue: Second VTube Studio won't launch**
+- Solution: Use portable version or separate installations
+
+**Issue: Ports already in use**
+- Solution: Change ports in VTube Studio settings and update `.env`
+
+**Issue: Avatars not synced in VNet**
+- Solution: Ensure both instances are connected to the same VNet session
+
+**Issue: Only one avatar receives lip sync**
+- Solution: This is expected behavior - only the active speaker receives lip sync. The system automatically switches based on which personality is responding.
+
+---
+
 ### Minecraft Integration (Future)
 
 > ⚠️ **Note:** Minecraft integration is currently stubbed. Full implementation coming soon.

@@ -4,17 +4,23 @@ Dialogue coordinator for Spark VTuber.
 Manages turn-taking and interaction between dual AI personalities.
 """
 
+from __future__ import annotations
+
 import asyncio
 import random
 from dataclasses import dataclass
 from enum import Enum
-from typing import AsyncIterator
+from typing import TYPE_CHECKING, AsyncIterator
 
+from spark_vtuber.avatar.base import BaseAvatar
 from spark_vtuber.llm.base import BaseLLM
 from spark_vtuber.llm.context import ConversationContext, MessageRole
 from spark_vtuber.personality.base import Personality
 from spark_vtuber.personality.manager import PersonalityManager
 from spark_vtuber.utils.logging import LoggerMixin
+
+if TYPE_CHECKING:
+    from spark_vtuber.avatar.dual_vtube_studio import DualVTubeStudioAvatar
 
 
 class TurnType(str, Enum):
@@ -45,6 +51,7 @@ class DialogueCoordinator(LoggerMixin):
     - Personality interjections
     - Takeover events
     - Response arbitration
+    - Dual avatar speaker switching (when in dual mode)
     """
 
     def __init__(
@@ -52,6 +59,8 @@ class DialogueCoordinator(LoggerMixin):
         llm: BaseLLM,
         personality_manager: PersonalityManager,
         context: ConversationContext,
+        avatar: BaseAvatar | None = None,
+        dual_mode: bool = False,
         interjection_probability: float = 0.1,
         takeover_probability: float = 0.02,
     ):
@@ -62,22 +71,63 @@ class DialogueCoordinator(LoggerMixin):
             llm: LLM instance
             personality_manager: Personality manager
             context: Conversation context
+            avatar: Optional avatar controller (DualVTubeStudioAvatar for dual mode)
+            dual_mode: Enable dual avatar mode for VNet
             interjection_probability: Chance of secondary AI interjecting
             takeover_probability: Chance of personality takeover
         """
         self.llm = llm
         self.personality_manager = personality_manager
         self.context = context
+        self.avatar = avatar
+        self.dual_mode = dual_mode
         self.interjection_probability = interjection_probability
         self.takeover_probability = takeover_probability
         self._turn_history: list[DialogueTurn] = []
         self._is_speaking = False
         self._pending_interjection: str | None = None
 
+        if dual_mode and avatar:
+            from spark_vtuber.avatar.dual_vtube_studio import DualVTubeStudioAvatar
+            if not isinstance(avatar, DualVTubeStudioAvatar):
+                self.logger.warning(
+                    "Dual mode enabled but avatar is not DualVTubeStudioAvatar. "
+                    "Speaker switching will not work correctly."
+                )
+
     @property
     def is_speaking(self) -> bool:
         """Check if AI is currently speaking."""
         return self._is_speaking
+
+    async def _set_active_speaker(self, personality_name: str) -> None:
+        """
+        Set the active speaker for dual avatar mode.
+
+        Maps personality names to primary/secondary avatar.
+        Primary personality -> primary avatar
+        Secondary personality -> secondary avatar
+
+        Args:
+            personality_name: Name of the personality speaking
+        """
+        if not self.dual_mode or not self.avatar:
+            return
+
+        from spark_vtuber.avatar.dual_vtube_studio import DualVTubeStudioAvatar
+        if not isinstance(self.avatar, DualVTubeStudioAvatar):
+            return
+
+        personalities = list(self.personality_manager.personalities.keys())
+        if not personalities:
+            return
+
+        if personality_name == personalities[0]:
+            await self.avatar.set_active_speaker("primary")
+            self.logger.debug(f"Set active speaker to primary ({personality_name})")
+        else:
+            await self.avatar.set_active_speaker("secondary")
+            self.logger.debug(f"Set active speaker to secondary ({personality_name})")
 
     async def process_user_message(
         self,
@@ -111,8 +161,11 @@ class DialogueCoordinator(LoggerMixin):
 
             self.context.add_user_message(message, name=username)
 
+            active_personality = self.personality_manager._active_personality or "unknown"
+            await self._set_active_speaker(active_personality)
+
             async for chunk in self._generate_response():
-                yield (self.personality_manager._active_personality or "unknown", chunk)
+                yield (active_personality, chunk)
 
             if self._should_interjection():
                 async for chunk in self._generate_interjection():
@@ -171,6 +224,7 @@ class DialogueCoordinator(LoggerMixin):
         interjecting = random.choice(other_personalities)
 
         await self.personality_manager.switch_to(interjecting, force=True)
+        await self._set_active_speaker(interjecting)
 
         interjection_prompt = self._create_interjection_prompt()
         self.context.system_prompt = self.personality_manager.active_personality.system_prompt

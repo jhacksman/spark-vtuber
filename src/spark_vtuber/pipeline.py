@@ -11,6 +11,7 @@ from typing import AsyncIterator, Callable
 import numpy as np
 
 from spark_vtuber.avatar.base import BaseAvatar, Emotion, LipSyncFrame
+from spark_vtuber.avatar.dual_vtube_studio import DualVTubeStudioAvatar
 from spark_vtuber.avatar.lip_sync import LipSyncProcessor
 from spark_vtuber.chat.base import BaseChat, ChatMessage
 from spark_vtuber.chat.queue import MessageQueue
@@ -90,10 +91,14 @@ class StreamingPipeline(LoggerMixin):
             switch_cooldown=self.settings.personality.switch_cooldown,
         )
 
+        dual_mode = self.settings.avatar.dual_avatar_enabled if self.settings else False
+
         self.coordinator = DialogueCoordinator(
             llm=llm,
             personality_manager=self.personality_manager,
             context=self.context,
+            avatar=avatar,
+            dual_mode=dual_mode,
         )
 
         self.message_queue = MessageQueue(

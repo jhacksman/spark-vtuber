@@ -53,6 +53,11 @@ def run(
         "--no-game",
         help="Disable game integration",
     ),
+    dual_avatar: bool = typer.Option(
+        False,
+        "--dual-avatar",
+        help="Enable dual avatar mode (requires VNet Multiplayer Collab)",
+    ),
 ) -> None:
     """Run the Spark VTuber streaming system."""
     settings = get_settings()
@@ -60,6 +65,9 @@ def run(
     if debug:
         settings.debug = True
         settings.log_level = "DEBUG"
+
+    if dual_avatar:
+        settings.avatar.dual_avatar_enabled = True
 
     setup_logging(level=settings.log_level)
 
@@ -83,6 +91,7 @@ async def _run_pipeline(
     from spark_vtuber.tts.coqui import CoquiTTS
     from spark_vtuber.memory.chroma import ChromaMemory
     from spark_vtuber.avatar.vtube_studio import VTubeStudioAvatar
+    from spark_vtuber.avatar.dual_vtube_studio import DualVTubeStudioAvatar
     from spark_vtuber.chat.twitch import TwitchChat
     from spark_vtuber.pipeline import PipelineBuilder
 
@@ -109,11 +118,20 @@ async def _run_pipeline(
     builder.with_llm(llm).with_tts(tts).with_memory(memory)
 
     if not no_avatar:
-        avatar = VTubeStudioAvatar(
-            host=settings.avatar.vtube_studio_host,
-            port=settings.avatar.vtube_studio_port,
-            plugin_name=settings.avatar.plugin_name,
-        )
+        if settings.avatar.dual_avatar_enabled:
+            console.print("[cyan]Initializing dual avatar mode (VNet)[/cyan]")
+            avatar = DualVTubeStudioAvatar(
+                primary_host=settings.avatar.vtube_studio_host,
+                primary_port=settings.avatar.primary_avatar_port,
+                secondary_host=settings.avatar.vtube_studio_host,
+                secondary_port=settings.avatar.secondary_avatar_port,
+            )
+        else:
+            avatar = VTubeStudioAvatar(
+                host=settings.avatar.vtube_studio_host,
+                port=settings.avatar.vtube_studio_port,
+                plugin_name=settings.avatar.plugin_name,
+            )
         builder.with_avatar(avatar)
 
     if not no_chat and settings.chat.twitch_enabled:
@@ -183,6 +201,10 @@ def status() -> None:
 
     table.add_row("Avatar", "VTube Studio Host", settings.avatar.vtube_studio_host)
     table.add_row("Avatar", "VTube Studio Port", str(settings.avatar.vtube_studio_port))
+    table.add_row("Avatar", "Dual Avatar Mode", str(settings.avatar.dual_avatar_enabled))
+    if settings.avatar.dual_avatar_enabled:
+        table.add_row("Avatar", "Primary Port", str(settings.avatar.primary_avatar_port))
+        table.add_row("Avatar", "Secondary Port", str(settings.avatar.secondary_avatar_port))
 
     table.add_row("Personality", "Primary", settings.personality.primary_name)
     table.add_row("Personality", "Secondary", settings.personality.secondary_name)
