@@ -157,6 +157,10 @@ uv run spark-vtuber run --no-chat --no-avatar --no-game
 - **Storage:** 2TB+ NVMe (for models)
 - **Network:** Fast connection for model downloads
 
+### DGX Spark Note
+
+DGX Spark uses ARM64 architecture (Grace CPU). The standard vLLM pip package doesn't support ARM64, so the system automatically falls back to the transformers backend. For high-performance vLLM inference on DGX Spark, use [NVIDIA's custom vLLM Docker image](https://build.nvidia.com/spark/vllm).
+
 ### Detailed Setup
 
 For complete setup instructions including:
