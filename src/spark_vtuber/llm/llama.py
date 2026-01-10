@@ -220,6 +220,7 @@ class LlamaLLM(BaseLLM):
                 self._adapters[self._active_adapter],
             )
 
+        prev_text = ""
         async for output in self._engine.generate(
             prompt,
             sampling_params,
@@ -227,7 +228,12 @@ class LlamaLLM(BaseLLM):
             lora_request=lora_request,
         ):
             if output.outputs:
-                yield output.outputs[0].text
+                current_text = output.outputs[0].text
+                # vLLM returns cumulative text, extract only new tokens
+                new_text = current_text[len(prev_text):]
+                prev_text = current_text
+                if new_text:
+                    yield new_text
 
     async def _generate_transformers(
         self,

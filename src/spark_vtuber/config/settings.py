@@ -7,7 +7,7 @@ Uses Pydantic Settings for environment variable loading and validation.
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,9 +18,9 @@ class LLMSettings(BaseSettings):
         default="meta-llama/Llama-3.1-70B-Instruct",
         description="HuggingFace model name or local path",
     )
-    quantization: Literal["none", "4bit", "8bit"] = Field(
-        default="4bit",
-        description="Quantization method for memory efficiency",
+    quantization: Literal["none", "awq", "gptq", "bitsandbytes_4bit"] = Field(
+        default="awq",
+        description="Quantization method (awq/gptq for vLLM, bitsandbytes_4bit for transformers)",
     )
     max_tokens: int = Field(default=2048, description="Maximum tokens to generate")
     temperature: float = Field(default=0.7, description="Sampling temperature")
@@ -38,8 +38,8 @@ class TTSSettings(BaseSettings):
     """Text-to-speech configuration settings."""
 
     engine: Literal["styletts2", "fish_speech", "coqui"] = Field(
-        default="coqui",
-        description="TTS engine to use",
+        default="styletts2",
+        description="TTS engine to use (styletts2 recommended for streaming)",
     )
     model_name: str = Field(
         default="tts_models/en/ljspeech/tacotron2-DDC",
@@ -130,12 +130,26 @@ class ChatSettings(BaseSettings):
 
     twitch_enabled: bool = Field(default=False, description="Enable Twitch integration")
     twitch_channel: str = Field(default="", description="Twitch channel name")
-    twitch_oauth_token: str = Field(default="", description="Twitch OAuth token")
+    twitch_oauth_token: SecretStr = Field(
+        default=SecretStr(""),
+        description="Twitch OAuth token (stored securely)",
+    )
     youtube_enabled: bool = Field(default=False, description="Enable YouTube integration")
     youtube_video_id: str = Field(default="", description="YouTube live video ID")
-    youtube_api_key: str = Field(default="", description="YouTube API key")
+    youtube_api_key: SecretStr = Field(
+        default=SecretStr(""),
+        description="YouTube API key (stored securely)",
+    )
     message_queue_size: int = Field(default=100, description="Maximum queued messages")
     rate_limit_per_minute: int = Field(default=20, description="Max responses per minute")
+
+    def get_twitch_token(self) -> str:
+        """Get Twitch OAuth token value (never log this)."""
+        return self.twitch_oauth_token.get_secret_value()
+
+    def get_youtube_key(self) -> str:
+        """Get YouTube API key value (never log this)."""
+        return self.youtube_api_key.get_secret_value()
 
     model_config = SettingsConfigDict(env_prefix="CHAT_")
 
