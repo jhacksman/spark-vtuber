@@ -333,6 +333,14 @@ install_dependencies() {
 
     source "$INSTALL_DIR/.vllm/bin/activate"
 
+    log_info "Installing vLLM runtime dependencies..."
+    # cloudpickle: Required by vllm.utils for serialization
+    # msgspec: Required for efficient message serialization
+    # partial-json-parser: Required for streaming JSON parsing
+    # prometheus-fastapi-instrumentator: Required for metrics
+    # lm-format-enforcer: Required for structured output
+    uv pip install cloudpickle msgspec partial-json-parser prometheus-fastapi-instrumentator lm-format-enforcer
+
     log_info "Installing xgrammar, setuptools-scm, and apache-tvm-ffi..."
     uv pip install xgrammar setuptools-scm apache-tvm-ffi==0.1.0b15 --prerelease=allow
 
