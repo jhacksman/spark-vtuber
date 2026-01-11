@@ -448,12 +448,14 @@ build_vllm() {
     source "$INSTALL_DIR/.vllm/bin/activate"
 
     # Set environment variables for Blackwell GPU (GB10 = SM 12.1)
-    # IMPORTANT: Must be quoted and exported properly for CMake to pick up
-    export TORCH_CUDA_ARCH_LIST="12.1"
+    # IMPORTANT: Must include SM 10.0a (Hopper) because vLLM's MOE kernels reference
+    # cutlass_moe_mm_sm100 symbols even on Blackwell. Without SM 10.0a, you get:
+    # "undefined symbol: _Z20cutlass_moe_mm_sm100..."
+    export TORCH_CUDA_ARCH_LIST="10.0a;12.1a"
     export TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas
     export MAX_JOBS=$(nproc)
     
-    log_info "Building for CUDA architecture: $TORCH_CUDA_ARCH_LIST"
+    log_info "Building for CUDA architectures: $TORCH_CUDA_ARCH_LIST"
 
     # Clean previous build artifacts to ensure fresh build with correct arch
     if [ -d "build" ] || [ -n "$(find vllm -name '*.so' 2>/dev/null)" ]; then
@@ -513,7 +515,7 @@ create_helper_scripts() {
 # vLLM Environment Configuration for DGX Spark
 SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 source "\$SCRIPT_DIR/.vllm/bin/activate"
-export TORCH_CUDA_ARCH_LIST="12.1"
+export TORCH_CUDA_ARCH_LIST="10.0a;12.1a"
 CUDA_PATH=\$(ls -d /usr/local/cuda* 2>/dev/null | head -1)
 export TRITON_PTXAS_PATH="\$CUDA_PATH/bin/ptxas"
 export PATH="\$CUDA_PATH/bin:\$PATH"
