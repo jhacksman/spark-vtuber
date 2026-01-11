@@ -333,6 +333,27 @@ install_dependencies() {
 
     source "$INSTALL_DIR/.vllm/bin/activate"
 
+    log_info "Installing vLLM runtime dependencies..."
+    # These are required at runtime but not automatically installed when building from source
+    # Core dependencies
+    uv pip install psutil cloudpickle regex cachetools sentencepiece numpy requests tqdm py-cpuinfo
+    # Tokenization and model loading
+    uv pip install transformers tokenizers protobuf tiktoken gguf einops
+    # API server dependencies
+    uv pip install "fastapi[standard]" aiohttp openai pydantic prometheus_client prometheus-fastapi-instrumentator
+    # Structured output and parsing
+    uv pip install "lm-format-enforcer==0.11.3" "outlines_core==0.2.11" "diskcache==5.6.3" "lark==1.2.2" partial-json-parser
+    # Serialization and communication
+    uv pip install pyzmq msgspec blake3 pybase64 cbor2
+    # Image/video processing
+    uv pip install pillow opencv-python-headless "mistral_common[image,audio]"
+    # Compression and utilities
+    uv pip install "compressed-tensors==0.12.2" "depyf==0.20.0" watchfiles python-json-logger scipy ninja setproctitle
+    # OpenAI compatibility
+    uv pip install "openai-harmony>=0.0.3" "anthropic==0.71.0"
+    # Additional utilities
+    uv pip install typing_extensions filelock pyyaml
+
     log_info "Installing xgrammar, setuptools-scm, and apache-tvm-ffi..."
     uv pip install xgrammar setuptools-scm apache-tvm-ffi==0.1.0b15 --prerelease=allow
 
@@ -396,12 +417,7 @@ apply_fixes() {
         sed -i 's/cuda_archs_loose_intersection(SCALED_MM_ARCHS "10.0a"/cuda_archs_loose_intersection(SCALED_MM_ARCHS "10.0a;12.1a"/' CMakeLists.txt
     fi
 
-    # Fix 3: flashinfer-python license field (pre-emptive fix)
-    log_info "Pre-fixing flashinfer-python license issue..."
-    # Clear uv cache for flashinfer to ensure clean download
-    rm -rf "$HOME/.cache/uv/sdists-v9/pypi/flashinfer-python" 2>/dev/null || true
-
-    # Fix 4: GPT-OSS Triton MOE kernels for Qwen3/gpt-oss support
+    # Fix 3: GPT-OSS Triton MOE kernels for Qwen3/gpt-oss support
     if [ -f "$SCRIPT_DIR/patches/gpt_oss_triton_moe.patch" ]; then
         log_info "Applying GPT-OSS Triton MOE kernel patch for Qwen3/gpt-oss support..."
         if patch --dry-run -p1 < "$SCRIPT_DIR/patches/gpt_oss_triton_moe.patch" > /dev/null 2>&1; then
@@ -422,34 +438,6 @@ apply_fixes() {
 }
 
 ################################################################################
-# Fix flashinfer-python License Field
-################################################################################
-
-fix_flashinfer_license() {
-    log_info "Fixing flashinfer-python license field in uv cache..."
-
-    # Find flashinfer pyproject.toml in uv cache
-    FLASHINFER_DIRS=$(find "$HOME/.cache/uv/sdists-v9/pypi/flashinfer-python" -name "pyproject.toml" 2>/dev/null || true)
-
-    if [ -n "$FLASHINFER_DIRS" ]; then
-        for PYPROJECT in $FLASHINFER_DIRS; do
-            log_info "Patching $PYPROJECT"
-            # More robust regex that handles various whitespace patterns
-            sed -i 's/^license[[:space:]]*=[[:space:]]*"Apache-2.0"[[:space:]]*$/license = {text = "Apache-2.0"}/' "$PYPROJECT"
-            sed -i 's/^license[[:space:]]*=[[:space:]]*"Apache-2\.0"[[:space:]]*$/license = {text = "Apache-2.0"}/' "$PYPROJECT"
-            # Remove license-files field which conflicts with PEP 621
-            sed -i '/^license-files[[:space:]]*=/d' "$PYPROJECT"
-            log_info "Applied fix to $PYPROJECT"
-        done
-        log_success "flashinfer-python license field fixed"
-        return 0
-    else
-        log_warning "No flashinfer-python found in cache yet"
-        return 1
-    fi
-}
-
-################################################################################
 # Build and Install vLLM
 ################################################################################
 
@@ -459,51 +447,42 @@ build_vllm() {
     cd "$INSTALL_DIR/vllm"
     source "$INSTALL_DIR/.vllm/bin/activate"
 
-    # Set environment variables
+    # Set environment variables for Blackwell GPU
     export TORCH_CUDA_ARCH_LIST=12.1a
-    export VLLM_USE_FLASHINFER_MXFP4_MOE=1
     export TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas
+    export MAX_JOBS=$(nproc)
 
-    log_info "Pre-downloading dependencies to apply fixes..."
-
-    # Download flashinfer without building to apply the fix
-    set +e
-    uv pip download flashinfer-python==0.4.1 --no-deps 2>/dev/null
-    set -e
-
-    # Wait a moment for cache to be written
-    sleep 2
-
-    # Apply flashinfer fix before building
-    log_info "Applying flashinfer-python license fix..."
-    fix_flashinfer_license
+    # Disable flashinfer-python - it has license field format issues on ARM64/aarch64
+    # that cause pyproject.toml validation to fail. vLLM will use fallback attention.
+    log_info "Disabling flashinfer-python (has license format issues on ARM64)..."
+    if [ -f "requirements/cuda.txt" ]; then
+        sed -i 's/^flashinfer-python/#flashinfer-python/' requirements/cuda.txt
+        log_success "flashinfer-python disabled in requirements/cuda.txt"
+    fi
 
     log_info "Starting vLLM build..."
     log_warning "This will take 15-20 minutes. Go grab a coffee!"
 
-    # Try to build vLLM
-    set +e  # Don't exit on error, we'll handle it
-    uv pip install --no-build-isolation --prerelease=allow -e . 2>&1 | tee "$INSTALL_DIR/vllm-build.log"
+    # Build vLLM with pip (more reliable than uv for complex builds)
+    pip install -e . --no-build-isolation -v 2>&1 | tee "$INSTALL_DIR/vllm-build.log"
     BUILD_STATUS=${PIPESTATUS[0]}
-    set -e
 
-    # Check if build failed due to flashinfer license issue
     if [ $BUILD_STATUS -ne 0 ]; then
-        if grep -q "flashinfer.*license.*must be valid" "$INSTALL_DIR/vllm-build.log"; then
-            log_warning "Build failed due to flashinfer-python license issue"
-            log_info "Applying flashinfer-python fix and retrying..."
-
-            # Fix flashinfer in cache
-            fix_flashinfer_license
-
-            # Retry build
-            log_info "Retrying vLLM build..."
-            uv pip install --no-build-isolation --prerelease=allow -e .
-        else
-            log_error "vLLM build failed. See $INSTALL_DIR/vllm-build.log for details"
-            exit 1
-        fi
+        log_error "vLLM build failed. See $INSTALL_DIR/vllm-build.log for details"
+        log_error "Last 50 lines of build log:"
+        tail -50 "$INSTALL_DIR/vllm-build.log"
+        exit 1
     fi
+
+    # Verify the build produced .so files
+    log_info "Verifying vLLM C extensions were built..."
+    SO_COUNT=$(find vllm -name "*.so" 2>/dev/null | wc -l)
+    if [ "$SO_COUNT" -eq 0 ]; then
+        log_error "vLLM build completed but no .so files were produced!"
+        log_error "This means the C extensions were not compiled."
+        exit 1
+    fi
+    log_success "Found $SO_COUNT compiled extension files"
 
     log_success "vLLM built successfully!"
 }
