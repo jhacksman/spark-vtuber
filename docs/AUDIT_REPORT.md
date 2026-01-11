@@ -7,6 +7,15 @@
 
 ---
 
+> **Note (January 11, 2026):** Some sections of this audit reference components that have since been replaced:
+> - **TTS:** Coqui TTS → Fish Speech 1.5 (local inference)
+> - **STT:** Whisper Large-v3 → Parakeet TDT 0.6B V2 (ultra-fast, 3386x RTFx)
+> - **LLM:** 70B models → Qwen3-30B-A3B (MoE, AWQ quantized)
+>
+> The architectural recommendations and code quality findings remain relevant.
+
+---
+
 ## Executive Summary
 
 This audit evaluates Devin.ai's complete implementation of the Spark VTuber AI streaming system against the technical specifications outlined in `research/reports/technical_feasibility_analysis.md`.

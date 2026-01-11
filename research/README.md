@@ -60,10 +60,10 @@ research/
    - TTS streaming: 80-150ms
    - Avatar sync: 16-33ms
 
-3. **Recommended Models:**
-   - LLM: Llama 3.1 70B or Qwen2.5 72B
-   - TTS: StyleTTS2 or Fish Speech
-   - STT: Faster-Whisper (Large-v3)
+3. **Recommended Models (Updated January 2026):**
+   - LLM: Qwen3-30B-A3B (MoE, AWQ quantized)
+   - TTS: Fish Speech 1.5 (local inference)
+   - STT: Parakeet TDT 0.6B V2 (ultra-fast, 3386x RTFx)
    - Memory: Mem0 + ChromaDB
 
 4. **Game Integration:** Hierarchical control
