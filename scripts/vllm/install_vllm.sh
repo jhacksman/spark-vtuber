@@ -447,10 +447,21 @@ build_vllm() {
     cd "$INSTALL_DIR/vllm"
     source "$INSTALL_DIR/.vllm/bin/activate"
 
-    # Set environment variables for Blackwell GPU
-    export TORCH_CUDA_ARCH_LIST=12.1a
+    # Set environment variables for Blackwell GPU (GB10 = SM 12.1)
+    # IMPORTANT: Must be quoted and exported properly for CMake to pick up
+    export TORCH_CUDA_ARCH_LIST="12.1"
     export TRITON_PTXAS_PATH=/usr/local/cuda/bin/ptxas
     export MAX_JOBS=$(nproc)
+    
+    log_info "Building for CUDA architecture: $TORCH_CUDA_ARCH_LIST"
+
+    # Clean previous build artifacts to ensure fresh build with correct arch
+    if [ -d "build" ] || [ -n "$(find vllm -name '*.so' 2>/dev/null)" ]; then
+        log_info "Cleaning previous build artifacts..."
+        rm -rf build/
+        find vllm -name "*.so" -delete 2>/dev/null || true
+        log_success "Previous build artifacts cleaned"
+    fi
 
     # Disable flashinfer-python - it has license field format issues on ARM64/aarch64
     # that cause pyproject.toml validation to fail. vLLM will use fallback attention.
@@ -464,6 +475,7 @@ build_vllm() {
     log_warning "This will take 15-20 minutes. Go grab a coffee!"
 
     # Build vLLM with pip (more reliable than uv for complex builds)
+    # The -v flag ensures we can see what CUDA arch is being used
     pip install -e . --no-build-isolation -v 2>&1 | tee "$INSTALL_DIR/vllm-build.log"
     BUILD_STATUS=${PIPESTATUS[0]}
 
@@ -501,8 +513,7 @@ create_helper_scripts() {
 # vLLM Environment Configuration for DGX Spark
 SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
 source "\$SCRIPT_DIR/.vllm/bin/activate"
-export TORCH_CUDA_ARCH_LIST=12.1a
-export VLLM_USE_FLASHINFER_MXFP4_MOE=1
+export TORCH_CUDA_ARCH_LIST="12.1"
 CUDA_PATH=\$(ls -d /usr/local/cuda* 2>/dev/null | head -1)
 export TRITON_PTXAS_PATH="\$CUDA_PATH/bin/ptxas"
 export PATH="\$CUDA_PATH/bin:\$PATH"
