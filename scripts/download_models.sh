@@ -113,19 +113,39 @@ case $llm_choice in
         ;;
 esac
 
-# TTS models (Fish Speech 1.5)
+# TTS models
 echo ""
-log_info "=== TTS Models (Fish Speech 1.5) ==="
-log_info "Fish Speech model will download automatically on first use"
-log_info "Default model: fishaudio/openaudio-s1-mini (~12GB)"
+log_info "=== TTS Models ==="
 echo ""
-read -p "Pre-download Fish Speech model now? (y/n) " -n 1 -r
-echo
+echo "Choose TTS model to download:"
+echo "  1) CosyVoice 3 0.5B (2-4GB) - Recommended: TRUE streaming, 150ms latency, emotion control"
+echo "  2) Fish Speech 1.5 (~12GB) - Higher quality but fake streaming"
+echo "  3) Skip TTS download"
+echo ""
+read -p "Enter choice (1-3): " tts_choice
 
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    log_info "Pre-downloading Fish Speech model..."
-
-    python3 << 'EOF'
+case $tts_choice in
+    1)
+        log_info "Downloading CosyVoice 3 model..."
+        log_info "Model: FunAudioLLM/Fun-CosyVoice3-0.5B-2512 (~2-4GB)"
+        log_info "Features: TRUE bi-streaming, 150ms latency, 100+ emotion controls"
+        download_model \
+            "FunAudioLLM/Fun-CosyVoice3-0.5B-2512" \
+            "cosyvoice3" \
+            "4"
+        
+        # Also clone CosyVoice repo for the inference code
+        log_info "Cloning CosyVoice repository for inference code..."
+        if [ ! -d "CosyVoice" ]; then
+            git clone --depth 1 https://github.com/FunAudioLLM/CosyVoice.git CosyVoice
+            log_info "CosyVoice repo cloned successfully"
+        else
+            log_warn "CosyVoice repo already exists"
+        fi
+        ;;
+    2)
+        log_info "Pre-downloading Fish Speech model..."
+        python3 << 'EOF'
 try:
     from huggingface_hub import snapshot_download
     print("Downloading Fish Speech model (fishaudio/openaudio-s1-mini)...")
@@ -138,7 +158,15 @@ except Exception as e:
     print(f"Error downloading Fish Speech: {e}")
     print("Fish Speech will be downloaded on first run")
 EOF
-fi
+        ;;
+    3)
+        log_info "Skipping TTS download"
+        ;;
+    *)
+        log_error "Invalid choice"
+        exit 1
+        ;;
+esac
 
 # STT models (Parakeet TDT 0.6B V2)
 echo ""
@@ -192,11 +220,17 @@ echo ""
 echo "For Qwen3-8B model:"
 echo "  LLM__MODEL_NAME=./models/qwen3-8b-awq"
 echo ""
+echo "For CosyVoice 3 TTS (recommended):"
+echo "  TTS__ENGINE=cosyvoice3"
+echo "  TTS__COSYVOICE3_MODEL_DIR=./models/cosyvoice3"
+echo ""
 
-log_warn "Remember to verify you have enough GPU memory:"
+log_warn "Remember to verify you have enough GPU memory (64GB total budget):"
 echo "  - Qwen3-30B-A3B model: requires ~15-20GB GPU memory (MoE architecture)"
 echo "  - Qwen3-14B model: requires ~8GB GPU memory"
 echo "  - Qwen3-8B model: requires ~5GB GPU memory"
+echo "  - CosyVoice 3 TTS: requires ~2-4GB GPU memory"
+echo "  - Parakeet TDT STT: requires ~4GB GPU memory"
 echo ""
 
 exit 0

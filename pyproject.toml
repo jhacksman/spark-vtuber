@@ -17,10 +17,17 @@ dependencies = [
     "peft>=0.10.0",
     "accelerate>=0.28.0",
     "torch>=2.2.0",
-    # TTS (Fish Speech for local inference)
+    # TTS - CosyVoice 3 (true streaming) and Fish Speech (quality)
     "fish-audio-sdk>=1.0.0",
     "soundfile>=0.12.0",
     "scipy>=1.12.0",
+    "torchaudio>=2.2.0",
+    # CosyVoice 3 dependencies (0.5B param streaming TTS with 150ms latency)
+    "huggingface_hub>=0.20.0",
+    "hyperpyyaml>=1.2.0",
+    "conformer>=0.3.0",
+    "onnxruntime>=1.16.0",
+    "WeTextProcessing>=1.0.0",
     # STT
     "faster-whisper>=1.0.0",
     "pyannote-audio>=3.1.0",

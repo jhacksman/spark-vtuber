@@ -14,7 +14,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from spark_vtuber.config.settings import Settings, get_settings
-from spark_vtuber.utils.logging import setup_logging, get_logger
+from spark_vtuber.utils.logging import get_logger, setup_logging
 
 app = typer.Typer(
     name="spark-vtuber",
@@ -87,14 +87,15 @@ async def _run_pipeline(
     no_game: bool,
 ) -> None:
     """Run the streaming pipeline."""
+    from spark_vtuber.avatar.dual_vtube_studio import DualVTubeStudioAvatar
+    from spark_vtuber.avatar.vtube_studio import VTubeStudioAvatar
+    from spark_vtuber.chat.twitch import TwitchChat
     from spark_vtuber.llm.llama import QwenLLM
+    from spark_vtuber.memory.chroma import ChromaMemory
+    from spark_vtuber.pipeline import PipelineBuilder
+    from spark_vtuber.tts.cosyvoice3 import CosyVoice3TTS
     from spark_vtuber.tts.fish_speech import FishSpeechTTS
     from spark_vtuber.tts.styletts2 import StyleTTS2
-    from spark_vtuber.memory.chroma import ChromaMemory
-    from spark_vtuber.avatar.vtube_studio import VTubeStudioAvatar
-    from spark_vtuber.avatar.dual_vtube_studio import DualVTubeStudioAvatar
-    from spark_vtuber.chat.twitch import TwitchChat
-    from spark_vtuber.pipeline import PipelineBuilder
 
     console.print("[yellow]Initializing components...[/yellow]")
 
@@ -105,7 +106,20 @@ async def _run_pipeline(
         max_model_len=settings.llm.context_length,
     )
 
-    if settings.tts.engine == "fish_speech":
+    if settings.tts.engine == "cosyvoice3":
+        console.print("[cyan]Using CosyVoice 3 for true streaming TTS (150ms latency)[/cyan]")
+        tts = CosyVoice3TTS(
+            sample_rate=settings.tts.sample_rate,
+            model_dir=settings.tts.cosyvoice3_model_dir,
+            reference_audio_path=settings.tts.cosyvoice3_reference_audio,
+            reference_text=settings.tts.cosyvoice3_reference_text,
+            default_instruct=None,  # Will use emotion tags from text
+            device=settings.tts.device,
+            load_vllm=settings.tts.cosyvoice3_load_vllm,
+            load_trt=settings.tts.cosyvoice3_load_trt,
+            fp16=settings.tts.half_precision,
+        )
+    elif settings.tts.engine == "fish_speech":
         tts = FishSpeechTTS(
             sample_rate=settings.tts.sample_rate,
             use_api=settings.tts.use_api,
@@ -243,16 +257,31 @@ def test_tts(
 
 async def _test_tts(text: str, output: Path) -> None:
     """Run TTS test."""
+    import soundfile as sf
+
+    from spark_vtuber.tts.cosyvoice3 import CosyVoice3TTS
     from spark_vtuber.tts.fish_speech import FishSpeechTTS
     from spark_vtuber.tts.styletts2 import StyleTTS2
-    import soundfile as sf
 
     settings = get_settings()
 
     console.print(f"[yellow]Synthesizing: {text}[/yellow]")
     console.print(f"[cyan]Using TTS engine: {settings.tts.engine}[/cyan]")
 
-    if settings.tts.engine == "fish_speech":
+    if settings.tts.engine == "cosyvoice3":
+        console.print("[cyan]CosyVoice 3: True streaming TTS (0.5B params, ~150ms latency)[/cyan]")
+        console.print("[cyan]Supports emotion tags: (excited), (happy), (sad), (angry), etc.[/cyan]")
+        tts = CosyVoice3TTS(
+            sample_rate=settings.tts.sample_rate,
+            model_dir=settings.tts.cosyvoice3_model_dir,
+            reference_audio_path=settings.tts.cosyvoice3_reference_audio,
+            reference_text=settings.tts.cosyvoice3_reference_text,
+            device=settings.tts.device,
+            load_vllm=settings.tts.cosyvoice3_load_vllm,
+            load_trt=settings.tts.cosyvoice3_load_trt,
+            fp16=settings.tts.half_precision,
+        )
+    elif settings.tts.engine == "fish_speech":
         tts = FishSpeechTTS(
             sample_rate=settings.tts.sample_rate,
             use_api=settings.tts.use_api,
@@ -274,6 +303,8 @@ async def _test_tts(text: str, output: Path) -> None:
     console.print(f"[green]Saved to {output}[/green]")
     console.print(f"Duration: {result.duration_seconds:.2f}s")
     console.print(f"Latency: {result.latency_ms:.0f}ms")
+    if settings.tts.engine == "cosyvoice3" and result.metadata.get("first_chunk_latency_ms"):
+        console.print(f"First chunk latency: {result.metadata['first_chunk_latency_ms']:.0f}ms")
 
     await tts.unload()
 
@@ -289,14 +320,15 @@ def test_llm(
 
 async def _test_llm(prompt: str, max_tokens: int) -> None:
     """Run LLM test using vLLM OpenAI API."""
-    import httpx
     import os
+
+    import httpx
 
     settings = get_settings()
 
     # Use vLLM OpenAI API endpoint (default: localhost:8000)
     vllm_base_url = os.environ.get("VLLM_API_URL", "http://localhost:8000/v1")
-    
+
     console.print(f"[yellow]Generating response for: {prompt}[/yellow]")
     console.print(f"[cyan]Using vLLM API at: {vllm_base_url}[/cyan]")
 
@@ -306,20 +338,20 @@ async def _test_llm(prompt: str, max_tokens: int) -> None:
             models_response = await client.get(f"{vllm_base_url}/models")
             models_response.raise_for_status()
             models_data = models_response.json()
-            
+
             if not models_data.get("data"):
                 console.print("[red]No models found on vLLM server[/red]")
                 console.print("[yellow]Make sure vLLM is running:[/yellow]")
                 console.print("  source ./vllm-install/vllm_env.sh")
                 console.print('  ./vllm-install/vllm-serve.sh "./models/qwen3-30b-a3b-awq" 8000')
                 return
-            
+
             model_id = models_data["data"][0]["id"]
             console.print(f"[cyan]Using model: {model_id}[/cyan]")
 
             # Make chat completion request with streaming
             console.print("[cyan]Response:[/cyan]")
-            
+
             async with client.stream(
                 "POST",
                 f"{vllm_base_url}/chat/completions",
@@ -345,7 +377,7 @@ async def _test_llm(prompt: str, max_tokens: int) -> None:
                                 console.print(chunk["choices"][0]["delta"]["content"], end="")
                         except json.JSONDecodeError:
                             pass
-            
+
             console.print()
 
     except httpx.ConnectError:
@@ -409,11 +441,12 @@ async def _run_benchmark(
     tts_delay: float,
 ) -> None:
     """Run benchmark."""
+    import time
+
     from spark_vtuber.metrics import (
         MetricsCollector,
         PipelineMetrics,
     )
-    import time
 
     console.print(Panel.fit(
         "[bold blue]Spark VTuber Benchmark[/bold blue]\n"
@@ -510,11 +543,11 @@ async def _run_benchmark(
             collector.record_metrics(metrics)
 
     else:
+        from spark_vtuber.chat.base import ChatMessage
         from spark_vtuber.llm.llama import QwenLLM
-        from spark_vtuber.tts.coqui import CoquiTTS
         from spark_vtuber.memory.chroma import ChromaMemory
         from spark_vtuber.pipeline import StreamingPipeline
-        from spark_vtuber.chat.base import ChatMessage
+        from spark_vtuber.tts.coqui import CoquiTTS
 
         settings = get_settings()
         llm = QwenLLM(
