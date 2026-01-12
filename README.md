@@ -60,7 +60,7 @@ spark-vtuber/
 - Model and technology selection
 - Architecture design and implementation
 - Core LLM inference pipeline (vLLM + transformers fallback)
-- TTS integration (Fish Speech 1.5 local inference)
+- TTS integration (CosyVoice 3.0 - Fun-CosyVoice3-0.5B-2512 with true streaming)
 - STT integration (Parakeet TDT 0.6B V2)
 - Memory system (ChromaDB + semantic search)
 - Avatar control (VTube Studio API)
@@ -95,7 +95,7 @@ spark-vtuber/
 | Component | Technology | Memory | Latency |
 |-----------|-----------|--------|---------|
 | LLM | Qwen3-30B-A3B (AWQ) | 15-20GB | 200-400ms |
-| TTS | Fish Speech 1.5 | ~12GB | 80-150ms |
+| TTS | CosyVoice 3.0 (Fun-CosyVoice3-0.5B-2512) | ~8GB | 150ms (true streaming) |
 | STT | Parakeet TDT 0.6B V2 | ~4GB | <100ms |
 | Memory | Mem0 + ChromaDB | 5-10GB | <50ms |
 | Avatar | VTube Studio + Live2D | ~2GB | 16-33ms |
@@ -253,7 +253,7 @@ TBD (Will be determined once core implementation begins)
 
 - NVIDIA for DGX Spark hardware, TensorRT-LLM, and Parakeet TDT
 - Alibaba/Qwen team for Qwen3 models
-- Fish Audio team for Fish Speech 1.5
+- FunAudioLLM team for CosyVoice 3.0
 - Open-source communities behind ChromaDB and Mem0
 - VTube Studio and Live2D for avatar technologies
 

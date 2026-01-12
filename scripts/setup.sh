@@ -159,10 +159,10 @@ LLM__CONTEXT_LENGTH=8192
 LLM__MAX_TOKENS=2048
 LLM__TEMPERATURE=0.7
 
-# TTS Configuration (Fish Speech 1.5 - local inference)
-TTS__ENGINE=fish_speech
-TTS__MODEL_NAME=speech-1.5
-TTS__SAMPLE_RATE=44100
+# TTS Configuration (CosyVoice 3 - local inference with TRUE streaming)
+TTS__ENGINE=cosyvoice
+TTS__MODEL_NAME=FunAudioLLM/Fun-CosyVoice3-0.5B-2512
+TTS__SAMPLE_RATE=22050
 TTS__STREAMING=true
 TTS__USE_API=false
 
