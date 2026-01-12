@@ -168,7 +168,7 @@ bash scripts/vllm/install_vllm.sh --install-dir ./vllm-install
 # Download models first (if not already done)
 bash scripts/download_models.sh
 
-# Start vLLM server
+# Start vLLM server (first load takes ~4-5 minutes to initialize)
 source ./vllm-install/vllm_env.sh
 ./vllm-install/vllm-serve.sh "./models/qwen3-30b-a3b-awq" 8000
 ```
