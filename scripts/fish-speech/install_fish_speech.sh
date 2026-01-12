@@ -283,10 +283,11 @@ install_fish_speech() {
     
     if [[ "$CUDA_MAJOR" -ge 13 ]]; then
         log_info "CUDA 13.0+ detected, using cu130 PyTorch wheels (required for GB10 SM 12.1)..."
-        uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
+        # Pin torchaudio<2.9 because Fish Speech uses list_audio_backends() which was removed in 2.9
+        uv pip install torch torchvision "torchaudio<2.9" --index-url https://download.pytorch.org/whl/cu130
     else
         log_info "Using cu126 PyTorch wheels..."
-        uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+        uv pip install torch torchvision "torchaudio<2.9" --index-url https://download.pytorch.org/whl/cu126
     fi
 
     # Verify PyTorch
