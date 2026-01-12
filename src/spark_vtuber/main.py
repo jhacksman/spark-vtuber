@@ -89,6 +89,7 @@ async def _run_pipeline(
     """Run the streaming pipeline."""
     from spark_vtuber.llm.llama import QwenLLM
     from spark_vtuber.tts.fish_speech import FishSpeechTTS
+    from spark_vtuber.tts.llmvox import LLMVoXTTS
     from spark_vtuber.tts.styletts2 import StyleTTS2
     from spark_vtuber.memory.chroma import ChromaMemory
     from spark_vtuber.avatar.vtube_studio import VTubeStudioAvatar
@@ -105,7 +106,16 @@ async def _run_pipeline(
         max_model_len=settings.llm.context_length,
     )
 
-    if settings.tts.engine == "fish_speech":
+    if settings.tts.engine == "llmvox":
+        console.print("[cyan]Using LLMVoX for true streaming TTS[/cyan]")
+        tts = LLMVoXTTS(
+            sample_rate=settings.tts.sample_rate,
+            model_path=settings.tts.model_path,
+            device=settings.tts.device,
+            initial_chunk_size=settings.tts.llmvox_initial_chunk_size,
+            max_chunk_size=settings.tts.llmvox_max_chunk_size,
+        )
+    elif settings.tts.engine == "fish_speech":
         tts = FishSpeechTTS(
             sample_rate=settings.tts.sample_rate,
             use_api=settings.tts.use_api,
@@ -244,6 +254,7 @@ def test_tts(
 async def _test_tts(text: str, output: Path) -> None:
     """Run TTS test."""
     from spark_vtuber.tts.fish_speech import FishSpeechTTS
+    from spark_vtuber.tts.llmvox import LLMVoXTTS
     from spark_vtuber.tts.styletts2 import StyleTTS2
     import soundfile as sf
 
@@ -252,7 +263,16 @@ async def _test_tts(text: str, output: Path) -> None:
     console.print(f"[yellow]Synthesizing: {text}[/yellow]")
     console.print(f"[cyan]Using TTS engine: {settings.tts.engine}[/cyan]")
 
-    if settings.tts.engine == "fish_speech":
+    if settings.tts.engine == "llmvox":
+        console.print("[cyan]LLMVoX: True streaming TTS (30M params, ~300ms latency)[/cyan]")
+        tts = LLMVoXTTS(
+            sample_rate=settings.tts.sample_rate,
+            model_path=settings.tts.model_path,
+            device=settings.tts.device,
+            initial_chunk_size=settings.tts.llmvox_initial_chunk_size,
+            max_chunk_size=settings.tts.llmvox_max_chunk_size,
+        )
+    elif settings.tts.engine == "fish_speech":
         tts = FishSpeechTTS(
             sample_rate=settings.tts.sample_rate,
             use_api=settings.tts.use_api,
@@ -274,6 +294,8 @@ async def _test_tts(text: str, output: Path) -> None:
     console.print(f"[green]Saved to {output}[/green]")
     console.print(f"Duration: {result.duration_seconds:.2f}s")
     console.print(f"Latency: {result.latency_ms:.0f}ms")
+    if settings.tts.engine == "llmvox" and result.metadata.get("first_chunk_latency_ms"):
+        console.print(f"First chunk latency: {result.metadata['first_chunk_latency_ms']:.0f}ms")
 
     await tts.unload()
 
