@@ -119,13 +119,16 @@ Chat Input → LLM Inference → TTS Streaming → Avatar Lip Sync
 #### TTS (Text-to-Speech)
 | Model | Initial Latency | Streaming | Quality | Memory |
 |-------|----------------|-----------|---------|--------|
-| **StyleTTS2** ✅ | 80-120ms | ✅ Yes | Excellent | 2-3GB |
-| **Fish Speech** ✅ | 60-80ms | ✅ Yes | Very Good | 2-4GB |
+| **CosyVoice 3.0** ✅ | 150ms | ✅ TRUE | Excellent | ~8GB |
+| StyleTTS2 | 80-120ms | ❌ Fake* | Excellent | 2-3GB |
+| Fish Speech | 60-80ms | ❌ Fake* | Very Good | 2-4GB |
 | XTTS (Coqui) | 150-200ms | ✅ Yes | Good | 3-5GB |
 | VITS2 | 100-150ms | Partial | Good | 1-2GB |
 | Bark | 300-500ms | ❌ No | Excellent | 4-6GB |
 
-**Recommendation:** **StyleTTS2** for best latency/quality balance
+*Fake streaming = synthesizes full audio before yielding chunks (no true streaming for local inference)
+
+**Recommendation:** **CosyVoice 3.0** for TRUE streaming with 100+ emotion controls and zero-shot voice cloning (3-15s audio)
 
 **Pipeline Optimization:**
 - Start TTS as soon as first complete sentence is generated
@@ -144,12 +147,12 @@ Chat Input → LLM Inference → TTS Streaming → Avatar Lip Sync
 
 ### Total Response Time
 ```
-Optimistic: 200ms (LLM first token) + 80ms (TTS) + 20ms (Avatar) = 300ms ✅
-Realistic:  300ms (LLM) + 120ms (TTS) + 30ms (Avatar) = 450ms ✅
+Optimistic: 200ms (LLM first token) + 150ms (TTS) + 20ms (Avatar) = 370ms ✅
+Realistic:  300ms (LLM) + 150ms (TTS) + 30ms (Avatar) = 480ms ✅
 Pessimistic: 400ms (LLM) + 150ms (TTS) + 33ms (Avatar) = 583ms ⚠️
 ```
 
-**Verdict:** <500ms target is **achievable with optimization**
+**Verdict:** <500ms target is **achievable with CosyVoice 3.0's true streaming**
 
 ### Streaming Pipeline Implementation
 ```python
@@ -442,12 +445,15 @@ def get_relevant_memories(query, current_personality):
 
 | System | Latency | Quality | Streaming | Memory | License |
 |--------|---------|---------|-----------|--------|---------|
-| **StyleTTS2** ✅ | 80-120ms | ★★★★★ | ✅ | 2-3GB | MIT |
-| **Fish Speech** ✅ | 60-80ms | ★★★★ | ✅ | 2-4GB | Apache |
-| XTTS (Coqui) | 150-200ms | ★★★★ | ✅ | 3-5GB | MPL 2.0 |
+| **CosyVoice 3.0** ✅ | 150ms | ★★★★★ | ✅ TRUE | ~8GB | Apache 2.0 |
+| StyleTTS2 | 80-120ms | ★★★★★ | ❌ Fake* | 2-3GB | MIT |
+| Fish Speech | 60-80ms | ★★★★ | ❌ Fake* | 2-4GB | Apache |
+| XTTS (Coqui) | 150-200ms | ★★★★ | ✅ Yes | 3-5GB | MPL 2.0 |
 | VITS2 | 100-150ms | ★★★ | Partial | 1-2GB | MIT |
 
-**Recommendation:** **StyleTTS2** for best overall balance, **Fish Speech** if latency critical
+*Fake streaming = no true streaming for local inference
+
+**Recommendation:** **CosyVoice 3.0** for TRUE streaming, 100+ emotion controls, zero-shot voice cloning (3-15s reference audio), and 22050 sample rate
 
 ### Speech-to-Text
 
@@ -487,17 +493,23 @@ def get_relevant_memories(query, current_personality):
 ### Key Papers to Review
 
 #### Low-Latency TTS
-1. **"Fish Speech: Leveraging Large Language Models for Advanced Multilingual Text-to-Speech Synthesis"** (2024)
-   - Sub-100ms streaming TTS
-   - Multi-language support
-   - Emotion control
+1. **"CosyVoice 3: Pushing the Limits of Zero-shot Speech Synthesis"** (2024)
+   - TRUE streaming TTS (150ms)
+   - 100+ emotion controls
+   - Zero-shot voice cloning with 3-15s reference audio
+   - 22050 sample rate for efficiency
 
 2. **"StyleTTS 2: Towards Human-Level Text-to-Speech through Style Diffusion and Adversarial Training"** (2024)
    - Human-level prosody
    - Controllable speaking styles
-   - Real-time capable
+   - Real-time capable (NOTE: no true streaming for local inference)
 
-3. **"Pheme: Efficient and Conversational Speech Generation"** (2024)
+3. **"Fish Speech: Leveraging Large Language Models for Advanced Multilingual Text-to-Speech Synthesis"** (2024)
+   - Multi-language support
+   - Emotion control
+   - (NOTE: no true streaming for local inference)
+
+4. **"Pheme: Efficient and Conversational Speech Generation"** (2024)
    - Explicit phoneme control (ideal for lip sync)
    - Low resource usage
 
@@ -573,7 +585,7 @@ def get_relevant_memories(query, current_personality):
 - [ ] Load Llama 3.1 70B with 4-bit quantization
 - [ ] Implement basic inference pipeline (test latency)
 - [ ] Integrate Faster-Whisper for STT
-- [ ] Integrate StyleTTS2 for TTS
+- [ ] Integrate CosyVoice 3.0 for TTS (true streaming, 100+ emotions)
 - [ ] Create simple chat interface (web UI)
 - [ ] Test end-to-end latency (<500ms target)
 
@@ -585,7 +597,8 @@ def get_relevant_memories(query, current_personality):
 - [ ] Set up VTube Studio + Live2D model
 - [ ] Implement VTube Studio API client
 - [ ] Create audio → phoneme → viseme pipeline
-- [ ] Synchronize TTS output with lip movements
+- [ ] Synchronize CosyVoice 3.0 true streaming output with lip movements
+- [ ] Configure emotion controls (100+ available emotions)
 - [ ] Add basic expression system (happy, sad, surprised)
 - [ ] Test streaming stability (2+ hours)
 
@@ -600,6 +613,7 @@ def get_relevant_memories(query, current_personality):
 - [ ] Build conversation summarization system
 - [ ] Test memory recall accuracy
 - [ ] Implement context pruning (10k token threshold)
+- [ ] Test zero-shot voice cloning with 3-15s reference audio
 - [ ] Stress test 8-hour conversation
 
 **Deliverables:** AI remembers past conversations
@@ -649,8 +663,8 @@ def get_relevant_memories(query, current_personality):
 - [ ] Optimize KV cache with H2O or StreamingLLM
 - [ ] Implement health monitoring
 - [ ] Add automatic recovery from errors
-- [ ] Fine-tune TTS for consistent voice
-- [ ] Enhance avatar expressions (emotion detection)
+- [ ] Configure CosyVoice 3.0 emotion controls for consistent voice
+- [ ] Enhance avatar expressions (emotion detection with 100+ emotions)
 - [ ] Create stream overlay graphics
 - [ ] Conduct 8-hour stability test
 
@@ -760,9 +774,10 @@ The proposed AI VTuber system is **technically achievable** on NVIDIA DGX Spark 
    - Enables true dual AI within 128GB constraint
 
 2. **Implement streaming pipeline** to achieve <500ms latency
-   - StyleTTS2 for TTS
+   - CosyVoice 3.0 for TRUE streaming TTS (150ms, 100+ emotions, zero-shot cloning)
    - Sentence-by-sentence processing
    - Speculative decoding for LLM
+   - 22050 sample rate for efficiency
 
 3. **Adopt hierarchical game control** for real-time games
    - LLM for strategy
@@ -778,14 +793,16 @@ The proposed AI VTuber system is **technically achievable** on NVIDIA DGX Spark 
 
 **High Priority:**
 - Start with single AI personality, add dual later
-- Use proven models (Llama 3.1, StyleTTS2, Faster-Whisper)
+- Use proven models (Llama 3.1, CosyVoice 3.0, Faster-Whisper)
 - Implement comprehensive monitoring from day one
 - Test with 2-4 hour streams before attempting 8 hours
+- Configure CosyVoice 3.0 emotion controls for personality expression
 
 **Medium Priority:**
 - Consider Qwen2.5-32B dual models as safer alternative
 - Add vision layer only if needed for gameplay
 - Build skill library incrementally for games
+- Experiment with zero-shot voice cloning (3-15s reference audio)
 
 **Low Priority (Nice to Have):**
 - Rhythm game support (requires specialized training)
@@ -837,8 +854,10 @@ This project sits at the **cutting edge of what's possible** on a single machine
 ## Appendix B: Reference Links
 
 - **Llama 3.1:** https://github.com/meta-llama/llama-models
-- **StyleTTS2:** https://github.com/yl4579/StyleTTS2
-- **Fish Speech:** https://github.com/fishaudio/fish-speech
+- **CosyVoice 3.0:** https://github.com/FunAudioLLM/CosyVoice
+- **CosyVoice 3.0 Model:** https://huggingface.co/FunAudioLLM/Fun-CosyVoice3-0.5B-2512
+- **StyleTTS2:** https://github.com/yl4579/StyleTTS2 (alternative, no true local streaming)
+- **Fish Speech:** https://github.com/fishaudio/fish-speech (alternative, no true local streaming)
 - **Mem0:** https://github.com/mem0ai/mem0
 - **Voyager:** https://github.com/MineDojo/Voyager
 - **VTube Studio:** https://denchisoft.com/

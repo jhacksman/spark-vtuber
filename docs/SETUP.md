@@ -138,7 +138,7 @@ bash scripts/download_models.sh
 
 # This downloads:
 # - Qwen3-30B-A3B AWQ (quantized MoE model)
-# - Fish Speech 1.5 model (openaudio-s1-mini)
+# - CosyVoice 3.0 model (Fun-CosyVoice3-0.5B-2512)
 # - Parakeet TDT 0.6B V2 (ultra-fast STT)
 # - Sentence transformer for embeddings
 ```
@@ -157,14 +157,14 @@ hf download \
     QuixiAI/Qwen3-30B-A3B-AWQ \
     --local-dir models/qwen3-30b-a3b-awq
 
-# Fish Speech 1.5 setup (local inference)
-git clone https://github.com/fishaudio/fish-speech
-cd fish-speech && pip install -e ".[cu129]"
+# CosyVoice 3.0 setup (true streaming TTS with 100+ emotion controls)
+git clone https://github.com/FunAudioLLM/CosyVoice
+cd CosyVoice && pip install -e .
 cd ..
 
-# Fish Speech model downloads automatically from HuggingFace on first use
+# CosyVoice 3.0 model downloads automatically from HuggingFace on first use
 # Or manually download:
-hf download fishaudio/openaudio-s1-mini --local-dir models/fish-speech
+hf download FunAudioLLM/Fun-CosyVoice3-0.5B-2512 --local-dir models/cosyvoice3
 
 # Parakeet TDT model (ultra-fast STT)
 hf download nvidia/parakeet-tdt-0.6b-v2 --local-dir models/parakeet-tdt-0.6b-v2
@@ -189,11 +189,13 @@ LLM__QUANTIZATION=awq
 LLM__GPU_MEMORY_UTILIZATION=0.70
 LLM__CONTEXT_LENGTH=8192
 
-# TTS Configuration (Fish Speech 1.5 - local inference)
-TTS__ENGINE=fish_speech
+# TTS Configuration (CosyVoice 3.0 - true streaming with 100+ emotions)
+TTS__ENGINE=cosyvoice
+TTS__MODEL_NAME=FunAudioLLM/Fun-CosyVoice3-0.5B-2512
 TTS__USE_API=false
 TTS__DEVICE=cuda
 TTS__HALF_PRECISION=true
+TTS__SAMPLE_RATE=22050
 
 # STT Configuration (Parakeet TDT - ultra-fast, low-latency)
 STT__ENGINE=parakeet
