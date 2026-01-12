@@ -47,6 +47,7 @@ cd vllm-install
 ./vllm-serve.sh
 
 # Or specify a local model path (after running download_models.sh)
+# First load takes ~4-5 minutes to initialize the model
 ./vllm-serve.sh "../models/qwen3-30b-a3b-awq" 8000
 
 # Check status
