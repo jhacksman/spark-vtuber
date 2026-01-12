@@ -31,6 +31,7 @@ dependencies = [
     # Avatar
     "websockets>=12.0",
     "librosa>=0.10.0",
+    "numba>=0.57.0",  # Explicitly pin numba for Python 3.10+ support
     "numpy>=1.26.0",
     # Chat Integration
     "irc>=20.0",
