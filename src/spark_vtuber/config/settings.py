@@ -38,8 +38,8 @@ class TTSSettings(BaseSettings):
     """Text-to-speech configuration settings."""
 
     engine: Literal["piper", "cosyvoice", "fish_speech", "styletts2"] = Field(
-        default="piper",
-        description="TTS engine to use (piper recommended for ARM64 compatibility)",
+        default="fish_speech",
+        description="TTS engine to use (fish_speech recommended for ARM64 + TRUE streaming)",
     )
     model_name: str = Field(
         default="en_US-amy-high",
