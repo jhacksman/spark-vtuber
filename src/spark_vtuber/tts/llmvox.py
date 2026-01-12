@@ -15,11 +15,10 @@ Key features:
 """
 
 import asyncio
-import os
 import time
+from collections.abc import AsyncIterator
 from pathlib import Path
 from queue import Empty, Queue
-from typing import AsyncIterator
 
 import numpy as np
 
@@ -145,7 +144,7 @@ class LLMVoXTTS(BaseTTS):
 
     def _ensure_checkpoints(self) -> Path:
         """Ensure model checkpoints are downloaded."""
-        from huggingface_hub import hf_hub_download, snapshot_download
+        from huggingface_hub import hf_hub_download
 
         # Default model directory
         model_dir = Path(self.model_path) if self.model_path else Path("./models/llmvox")
@@ -206,7 +205,6 @@ model:
 
     def _load_wavtokenizer(self, model_dir: Path, device):
         """Load WavTokenizer model."""
-        import torch
 
         # Try to import WavTokenizer
         try:
