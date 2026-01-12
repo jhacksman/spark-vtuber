@@ -62,7 +62,7 @@ research/
 
 3. **Recommended Models (Updated January 2026):**
    - LLM: Qwen3-30B-A3B (MoE, AWQ quantized)
-   - TTS: CosyVoice 3.0 (Fun-CosyVoice3-0.5B-2512, true streaming)
+   - TTS: Fish Speech 1.5 (local inference)
    - STT: Parakeet TDT 0.6B V2 (ultra-fast, 3386x RTFx)
    - Memory: Mem0 + ChromaDB
 
@@ -81,9 +81,8 @@ research/
 ## Recent Research References (2024-2025)
 
 ### Models & Frameworks
-- **CosyVoice 3.0** - True streaming TTS (150ms, 100+ emotion controls, zero-shot cloning)
-- **StyleTTS2** - Human-level prosody control (no true streaming for local inference)
-- **Fish Speech** - Streaming TTS alternative (lacks true streaming for local inference)
+- **Fish Speech** - Low-latency streaming TTS (<80ms)
+- **StyleTTS2** - Human-level prosody control
 - **MuseTalk** - Real-time audio-driven facial animation
 - **STEVE-1** - Minecraft foundation model
 - **Mem0** - Personalized AI memory layer
