@@ -37,19 +37,23 @@ class LLMSettings(BaseSettings):
 class TTSSettings(BaseSettings):
     """Text-to-speech configuration settings."""
 
-    engine: Literal["cosyvoice", "fish_speech", "styletts2"] = Field(
-        default="cosyvoice",
-        description="TTS engine to use (cosyvoice recommended for streaming + quality)",
+    engine: Literal["piper", "cosyvoice", "fish_speech", "styletts2"] = Field(
+        default="piper",
+        description="TTS engine to use (piper recommended for ARM64 compatibility)",
     )
     model_name: str = Field(
-        default="FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
-        description="CosyVoice model version (Fun-CosyVoice3-0.5B-2512 recommended)",
+        default="en_US-amy-high",
+        description="Piper voice model name (without .onnx extension)",
+    )
+    model_path: str | None = Field(
+        default="./models/piper/en_US-amy-high.onnx",
+        description="Path to Piper .onnx model file"
     )
     voice_id: str | None = Field(default=None, description="Voice reference ID or audio file path")
     reference_audio_path: str | None = Field(
         default=None, description="Default reference audio file path for voice cloning"
     )
-    sample_rate: int = Field(default=22050, description="Audio sample rate (22050 for CosyVoice)")
+    sample_rate: int = Field(default=22050, description="Audio sample rate (auto-detected from model)")
     streaming: bool = Field(default=True, description="Enable streaming synthesis")
     use_api: bool = Field(
         default=False,
@@ -57,13 +61,17 @@ class TTSSettings(BaseSettings):
     )
     api_key: str | None = Field(
         default=None,
-        description="API key for cloud mode (or set COSYVOICE_API_KEY env var)",
+        description="API key for cloud mode",
     )
     # Local inference settings
     device: str = Field(default="cuda", description="Device for local inference")
+    use_cuda: bool = Field(default=True, description="Use CUDA acceleration (Piper)")
     half_precision: bool = Field(default=True, description="Use FP16 for faster inference")
     compile_model: bool = Field(default=False, description="Use JIT compilation for optimization")
-    model_path: str | None = Field(default=None, description="Path to local model weights")
+    # Piper-specific settings
+    length_scale: float = Field(default=1.0, description="Speech speed control (Piper)")
+    noise_scale: float = Field(default=0.667, description="Audio noise level (Piper)")
+    noise_w: float = Field(default=0.8, description="Speech variation (Piper)")
 
     model_config = SettingsConfigDict(env_prefix="TTS_")
 
