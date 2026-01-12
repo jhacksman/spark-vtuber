@@ -26,7 +26,7 @@ NC='\033[0m'
 
 # Default configuration
 INSTALL_DIR="$PWD/fish-speech-install"
-PYTHON_VERSION="3.12"
+PYTHON_VERSION="3.11"
 SKIP_MODEL=false
 FISH_SPEECH_REPO="https://github.com/fishaudio/fish-speech.git"
 
