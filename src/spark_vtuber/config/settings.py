@@ -34,44 +34,72 @@ class LLMSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="LLM_")
 
 
+class BreakFinderSettings(BaseSettings):
+    """Break finder agent configuration for intelligent TTS chunking."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Enable LLM-based break finding (falls back to heuristics if False)",
+    )
+    model_name: str = Field(
+        default="Qwen/Qwen3-0.5B-Instruct",
+        description="Model for break finding (any model works - 0.5B, 3B, etc.)",
+    )
+    api_base: str = Field(
+        default="http://localhost:8001/v1",
+        description="OpenAI-compatible API base URL for break finder model",
+    )
+    timeout_ms: int = Field(
+        default=100,
+        description="Maximum time to wait for LLM response before falling back to heuristics",
+    )
+    min_first_chunk_chars: int = Field(
+        default=5,
+        description="Minimum characters for first TTS chunk",
+    )
+    max_first_chunk_chars: int = Field(
+        default=150,
+        description="Maximum characters for first TTS chunk",
+    )
+
+    model_config = SettingsConfigDict(env_prefix="BREAK_FINDER_")
+
+
 class TTSSettings(BaseSettings):
     """Text-to-speech configuration settings."""
 
-    engine: Literal["piper", "cosyvoice", "fish_speech", "styletts2"] = Field(
-        default="piper",
-        description="TTS engine to use (piper recommended for ARM64 compatibility)",
+    engine: Literal["fish_speech", "styletts2"] = Field(
+        default="fish_speech",
+        description="TTS engine to use (fish_speech recommended for DGX Spark)",
     )
     model_name: str = Field(
-        default="en_US-amy-high",
-        description="Piper voice model name (without .onnx extension)",
+        default="speech-1.5",
+        description="Fish Speech model version (speech-1.5 recommended)",
     )
     model_path: str | None = Field(
-        default="./models/piper/en_US-amy-high.onnx",
-        description="Path to Piper .onnx model file"
+        default=None,
+        description="Path to local model weights (auto-downloads if not specified)",
     )
-    voice_id: str | None = Field(default=None, description="Voice reference ID or audio file path")
+    voice_id: str | None = Field(default=None, description="Voice reference ID for synthesis")
     reference_audio_path: str | None = Field(
         default=None, description="Default reference audio file path for voice cloning"
     )
-    sample_rate: int = Field(default=22050, description="Audio sample rate (auto-detected from model)")
+    sample_rate: int = Field(default=44100, description="Audio sample rate (44100 for Fish Speech)")
     streaming: bool = Field(default=True, description="Enable streaming synthesis")
     use_api: bool = Field(
         default=False,
-        description="Use cloud API (set False for local inference)",
+        description="Use Fish Audio cloud API (set False for local inference)",
     )
     api_key: str | None = Field(
         default=None,
-        description="API key for cloud mode",
+        description="Fish Audio API key (or set FISH_API_KEY env var)",
     )
     # Local inference settings
     device: str = Field(default="cuda", description="Device for local inference")
-    use_cuda: bool = Field(default=True, description="Use CUDA acceleration (Piper)")
     half_precision: bool = Field(default=True, description="Use FP16 for faster inference")
-    compile_model: bool = Field(default=False, description="Use JIT compilation for optimization")
-    # Piper-specific settings
-    length_scale: float = Field(default=1.0, description="Speech speed control (Piper)")
-    noise_scale: float = Field(default=0.667, description="Audio noise level (Piper)")
-    noise_w: float = Field(default=0.8, description="Speech variation (Piper)")
+    compile_model: bool = Field(default=False, description="Use torch.compile for optimization")
+    # Break finder settings
+    break_finder: BreakFinderSettings = Field(default_factory=BreakFinderSettings)
 
     model_config = SettingsConfigDict(env_prefix="TTS_")
 
