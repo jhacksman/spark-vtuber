@@ -63,29 +63,29 @@ src/llm/
 
 ---
 
-### Phase 3: TTS Pipeline (CosyVoice 3.0)
-**Goal:** Real-time text-to-speech with true streaming output
+### Phase 3: TTS Pipeline (StyleTTS2/Fish Speech)
+**Goal:** Real-time text-to-speech with streaming output
 
 **Tasks:**
 - [ ] Implement TTS base class with streaming interface
-- [ ] Integrate CosyVoice 3.0 (Fun-CosyVoice3-0.5B-2512) with true streaming
+- [ ] Integrate StyleTTS2 for high-quality synthesis
+- [ ] Add Fish Speech as low-latency alternative
 - [ ] Implement sentence boundary detection for streaming
-- [ ] Add voice cloning/customization support (3-15s reference audio)
-- [ ] Configure emotion controls (100+ emotions available)
+- [ ] Add voice cloning/customization support
 
 **Testing:**
 - Unit tests for TTS interface
 - Integration test: Generate audio from text
-- Latency test: Measure time-to-first-audio (150ms target, true streaming)
+- Latency test: Measure time-to-first-audio (<150ms target)
 - Quality test: Manual listening evaluation
-- Zero-shot cloning test: Verify voice cloning with short reference
 
 **Files:**
 ```
 src/tts/
 ├── __init__.py
 ├── base.py          # Abstract TTS interface
-├── cosyvoice.py     # CosyVoice 3.0 implementation
+├── styletts2.py     # StyleTTS2 implementation
+├── fish_speech.py   # Fish Speech implementation
 └── streaming.py     # Streaming audio utilities
 ```
 
@@ -350,8 +350,8 @@ peft = "^0.10.0"  # LoRA support
 accelerate = "^0.28.0"
 
 # TTS
-cosyvoice = {git = "https://github.com/FunAudioLLM/CosyVoice"}
-# Alternative: styletts2 (no true streaming for local inference)
+styletts2 = {git = "https://github.com/yl4579/StyleTTS2"}
+# fish-speech = {git = "https://github.com/fishaudio/fish-speech"}
 
 # STT
 faster-whisper = "^1.0.0"

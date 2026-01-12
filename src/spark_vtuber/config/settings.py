@@ -81,9 +81,6 @@ class TTSSettings(BaseSettings):
         description="Path to local model weights (auto-downloads if not specified)",
     )
     voice_id: str | None = Field(default=None, description="Voice reference ID for synthesis")
-    reference_audio_path: str | None = Field(
-        default=None, description="Default reference audio file path for voice cloning"
-    )
     sample_rate: int = Field(default=44100, description="Audio sample rate (44100 for Fish Speech)")
     streaming: bool = Field(default=True, description="Enable streaming synthesis")
     use_api: bool = Field(
