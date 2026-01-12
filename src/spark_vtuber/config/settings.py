@@ -37,16 +37,16 @@ class LLMSettings(BaseSettings):
 class TTSSettings(BaseSettings):
     """Text-to-speech configuration settings."""
 
-    engine: Literal["fish_speech", "styletts2"] = Field(
-        default="fish_speech",
-        description="TTS engine to use (fish_speech recommended for production)",
+    engine: Literal["fish_speech", "styletts2", "llmvox"] = Field(
+        default="llmvox",
+        description="TTS engine to use (llmvox for true streaming, fish_speech for quality)",
     )
     model_name: str = Field(
         default="speech-1.5",
         description="Fish Speech model version (speech-1.5 recommended)",
     )
     voice_id: str | None = Field(default=None, description="Voice reference ID for synthesis")
-    sample_rate: int = Field(default=44100, description="Audio sample rate (44100 for Fish Speech)")
+    sample_rate: int = Field(default=24000, description="Audio sample rate (24000 for LLMVoX, 44100 for Fish Speech)")
     streaming: bool = Field(default=True, description="Enable streaming synthesis")
     use_api: bool = Field(
         default=False,
@@ -61,6 +61,15 @@ class TTSSettings(BaseSettings):
     half_precision: bool = Field(default=True, description="Use FP16 for faster inference")
     compile_model: bool = Field(default=False, description="Use torch.compile for optimization")
     model_path: str | None = Field(default=None, description="Path to local model weights")
+    # LLMVoX-specific settings
+    llmvox_initial_chunk_size: int = Field(
+        default=10,
+        description="Initial audio chunk size for LLMVoX streaming (smaller = faster first response)",
+    )
+    llmvox_max_chunk_size: int = Field(
+        default=1280,
+        description="Maximum audio chunk size for LLMVoX streaming (larger = better quality)",
+    )
 
     model_config = SettingsConfigDict(env_prefix="TTS_")
 
