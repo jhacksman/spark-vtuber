@@ -273,15 +273,16 @@ install_fish_speech() {
     source "$INSTALL_DIR/.fish-speech/bin/activate"
 
     # Determine CUDA version for PyTorch
-    # DGX Spark has CUDA 13.0, but PyTorch wheels are available for cu129
+    # DGX Spark has CUDA 13.0 and GB10 GPU (SM 12.1)
+    # Must use cu130 wheels for SM 12.1 support (cu129 only supports up to SM 12.0)
     log_info "Installing PyTorch with CUDA support..."
     
-    # Check if CUDA 13.0 (use cu129 wheels which are compatible)
+    # Check CUDA version
     CUDA_MAJOR=$(nvcc --version | grep "release" | awk '{print $6}' | cut -d'.' -f1 | tr -d 'V')
     
     if [[ "$CUDA_MAJOR" -ge 13 ]]; then
-        log_info "CUDA 13.0+ detected, using cu129 PyTorch wheels..."
-        uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu129
+        log_info "CUDA 13.0+ detected, using cu130 PyTorch wheels (required for GB10 SM 12.1)..."
+        uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
     else
         log_info "Using cu126 PyTorch wheels..."
         uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
