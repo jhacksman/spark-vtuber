@@ -49,13 +49,18 @@ class TTSSettings(BaseSettings):
     sample_rate: int = Field(default=44100, description="Audio sample rate (44100 for Fish Speech)")
     streaming: bool = Field(default=True, description="Enable streaming synthesis")
     use_api: bool = Field(
-        default=True,
+        default=False,
         description="Use Fish Audio cloud API (set False for local inference)",
     )
     api_key: str | None = Field(
         default=None,
         description="Fish Audio API key (or set FISH_API_KEY env var)",
     )
+    # Local inference settings
+    device: str = Field(default="cuda", description="Device for local inference")
+    half_precision: bool = Field(default=True, description="Use FP16 for faster inference")
+    compile_model: bool = Field(default=False, description="Use torch.compile for optimization")
+    model_path: str | None = Field(default=None, description="Path to local model weights")
 
     model_config = SettingsConfigDict(env_prefix="TTS_")
 
@@ -63,9 +68,17 @@ class TTSSettings(BaseSettings):
 class STTSettings(BaseSettings):
     """Speech-to-text configuration settings."""
 
+    engine: Literal["parakeet", "whisper"] = Field(
+        default="parakeet",
+        description="STT engine to use (parakeet recommended for low latency)",
+    )
+    model_name: str = Field(
+        default="nvidia/parakeet-tdt-0.6b-v2",
+        description="Model name for Parakeet (HuggingFace model ID)",
+    )
     model_size: Literal["tiny", "base", "small", "medium", "large-v3"] = Field(
         default="large-v3",
-        description="Whisper model size",
+        description="Whisper model size (only used when engine=whisper)",
     )
     device: str = Field(default="cuda", description="Device for inference")
     compute_type: Literal["float16", "int8", "int8_float16"] = Field(
