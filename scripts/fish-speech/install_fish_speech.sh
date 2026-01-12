@@ -30,8 +30,9 @@ PYTHON_VERSION="3.12"
 SKIP_MODEL=false
 FISH_SPEECH_REPO="https://github.com/fishaudio/fish-speech.git"
 
-# Script directory
+# Script directory and repo root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 ################################################################################
 # Helper Functions
@@ -308,10 +309,10 @@ install_fish_speech() {
 ################################################################################
 
 download_model() {
-    print_header "Step 5/5: Downloading Fish Speech Model"
+    print_header "Step 5/5: Setting Up Fish Speech Model"
 
     if [ "$SKIP_MODEL" = true ]; then
-        log_info "Skipping model download (--skip-model flag set)"
+        log_info "Skipping model setup (--skip-model flag set)"
         return
     fi
 
@@ -319,20 +320,36 @@ download_model() {
     source "$INSTALL_DIR/.fish-speech/bin/activate"
 
     MODEL_DIR="$INSTALL_DIR/fish-speech/checkpoints/openaudio-s1-mini"
+    SHARED_MODEL_DIR="$REPO_ROOT/models/openaudio-s1-mini"
 
+    # Create checkpoints directory if it doesn't exist
+    mkdir -p "$INSTALL_DIR/fish-speech/checkpoints"
+
+    # Check if model already exists in checkpoints
     if [ -d "$MODEL_DIR" ] && [ "$(ls -A $MODEL_DIR 2>/dev/null)" ]; then
         log_warning "Model already exists at $MODEL_DIR"
         read -p "Re-download? (y/N) " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Skipping model download"
+            log_info "Using existing model"
             return
         fi
         rm -rf "$MODEL_DIR"
     fi
 
+    # Check if model exists in shared models folder (from download_models.sh)
+    if [ -d "$SHARED_MODEL_DIR" ] && [ "$(ls -A $SHARED_MODEL_DIR 2>/dev/null)" ]; then
+        log_info "Found Fish Speech model in shared models folder"
+        log_info "Creating symlink: $MODEL_DIR -> $SHARED_MODEL_DIR"
+        ln -sf "$SHARED_MODEL_DIR" "$MODEL_DIR"
+        log_success "Model symlinked from $SHARED_MODEL_DIR"
+        return
+    fi
+
+    # Download model if not found anywhere
     log_info "Downloading Fish Speech model (fishaudio/openaudio-s1-mini)..."
     log_warning "This may take a while (~12GB download)..."
+    log_info "Tip: Run ./scripts/download_models.sh first to download to shared models folder"
 
     # Install huggingface_hub if not present
     uv pip install huggingface_hub
