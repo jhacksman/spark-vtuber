@@ -34,16 +34,51 @@ class LLMSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="LLM_")
 
 
+class BreakFinderSettings(BaseSettings):
+    """Break finder agent configuration for intelligent TTS chunking."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Enable LLM-based break finding (falls back to heuristics if False)",
+    )
+    model_name: str = Field(
+        default="Qwen/Qwen3-0.5B-Instruct",
+        description="Model for break finding (any model works - 0.5B, 3B, etc.)",
+    )
+    api_base: str = Field(
+        default="http://localhost:8001/v1",
+        description="OpenAI-compatible API base URL for break finder model",
+    )
+    timeout_ms: int = Field(
+        default=100,
+        description="Maximum time to wait for LLM response before falling back to heuristics",
+    )
+    min_first_chunk_chars: int = Field(
+        default=5,
+        description="Minimum characters for first TTS chunk",
+    )
+    max_first_chunk_chars: int = Field(
+        default=150,
+        description="Maximum characters for first TTS chunk",
+    )
+
+    model_config = SettingsConfigDict(env_prefix="BREAK_FINDER_")
+
+
 class TTSSettings(BaseSettings):
     """Text-to-speech configuration settings."""
 
     engine: Literal["fish_speech", "styletts2"] = Field(
         default="fish_speech",
-        description="TTS engine to use (fish_speech recommended for production)",
+        description="TTS engine to use (fish_speech recommended for DGX Spark)",
     )
     model_name: str = Field(
         default="speech-1.5",
         description="Fish Speech model version (speech-1.5 recommended)",
+    )
+    model_path: str | None = Field(
+        default=None,
+        description="Path to local model weights (auto-downloads if not specified)",
     )
     voice_id: str | None = Field(default=None, description="Voice reference ID for synthesis")
     sample_rate: int = Field(default=44100, description="Audio sample rate (44100 for Fish Speech)")
@@ -60,7 +95,8 @@ class TTSSettings(BaseSettings):
     device: str = Field(default="cuda", description="Device for local inference")
     half_precision: bool = Field(default=True, description="Use FP16 for faster inference")
     compile_model: bool = Field(default=False, description="Use torch.compile for optimization")
-    model_path: str | None = Field(default=None, description="Path to local model weights")
+    # Break finder settings
+    break_finder: BreakFinderSettings = Field(default_factory=BreakFinderSettings)
 
     model_config = SettingsConfigDict(env_prefix="TTS_")
 
