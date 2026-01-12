@@ -10,6 +10,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Configuration
 MODEL="${1:-Qwen/Qwen2.5-0.5B-Instruct}"
 PORT="${2:-8000}"
+
+# Convert relative model path to absolute path (relative to where user ran the command)
+# This is needed because we cd to VLLM_DIR before running vLLM
+if [[ "$MODEL" == ./* ]] || [[ "$MODEL" == ../* ]]; then
+    # Save the original working directory
+    ORIGINAL_PWD="$(pwd)"
+    MODEL="$(cd "$ORIGINAL_PWD" && realpath "$MODEL")"
+    echo "INFO: Converted relative path to absolute: $MODEL"
+fi
 VLLM_DIR="$SCRIPT_DIR/vllm"
 ENV_SCRIPT="$SCRIPT_DIR/vllm_env.sh"
 PID_FILE="$SCRIPT_DIR/.vllm-server.pid"
