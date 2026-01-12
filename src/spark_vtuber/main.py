@@ -90,7 +90,6 @@ async def _run_pipeline(
     from spark_vtuber.llm.llama import QwenLLM
     from spark_vtuber.tts.cosyvoice import CosyVoiceTTS
     from spark_vtuber.tts.fish_speech import FishSpeechTTS
-    from spark_vtuber.tts.piper import PiperTTS
     from spark_vtuber.tts.styletts2 import StyleTTS2
     from spark_vtuber.memory.chroma import ChromaMemory
     from spark_vtuber.avatar.vtube_studio import VTubeStudioAvatar
@@ -107,16 +106,7 @@ async def _run_pipeline(
         max_model_len=settings.llm.context_length,
     )
 
-    if settings.tts.engine == "piper":
-        tts = PiperTTS(
-            model_path=settings.tts.model_path,
-            sample_rate=settings.tts.sample_rate,
-            use_cuda=settings.tts.use_cuda,
-            length_scale=settings.tts.length_scale,
-            noise_scale=settings.tts.noise_scale,
-            noise_w=settings.tts.noise_w,
-        )
-    elif settings.tts.engine == "cosyvoice":
+    if settings.tts.engine == "cosyvoice":
         tts = CosyVoiceTTS(
             sample_rate=settings.tts.sample_rate,
             use_api=settings.tts.use_api,
@@ -268,7 +258,6 @@ async def _test_tts(text: str, output: Path) -> None:
     """Run TTS test."""
     from spark_vtuber.tts.cosyvoice import CosyVoiceTTS
     from spark_vtuber.tts.fish_speech import FishSpeechTTS
-    from spark_vtuber.tts.piper import PiperTTS
     from spark_vtuber.tts.styletts2 import StyleTTS2
     import soundfile as sf
 
@@ -296,15 +285,6 @@ async def _test_tts(text: str, output: Path) -> None:
             api_key=settings.tts.api_key,
             reference_id=settings.tts.voice_id,
             model=settings.tts.model_name,
-        )
-    elif settings.tts.engine == "piper":
-        tts = PiperTTS(
-            model_path=settings.tts.model_path,
-            sample_rate=settings.tts.sample_rate,
-            use_cuda=settings.tts.use_cuda,
-            length_scale=settings.tts.length_scale,
-            noise_scale=settings.tts.noise_scale,
-            noise_w=settings.tts.noise_w,
         )
     else:
         tts = StyleTTS2(
