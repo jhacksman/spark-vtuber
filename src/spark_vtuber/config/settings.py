@@ -37,16 +37,16 @@ class LLMSettings(BaseSettings):
 class TTSSettings(BaseSettings):
     """Text-to-speech configuration settings."""
 
-    engine: Literal["fish_speech", "styletts2"] = Field(
-        default="fish_speech",
-        description="TTS engine to use (fish_speech recommended for production)",
+    engine: Literal["fish_speech", "styletts2", "cosyvoice3"] = Field(
+        default="cosyvoice3",
+        description="TTS engine to use (cosyvoice3 for true streaming with 150ms latency and emotion control)",
     )
     model_name: str = Field(
         default="speech-1.5",
         description="Fish Speech model version (speech-1.5 recommended)",
     )
     voice_id: str | None = Field(default=None, description="Voice reference ID for synthesis")
-    sample_rate: int = Field(default=44100, description="Audio sample rate (44100 for Fish Speech)")
+    sample_rate: int = Field(default=24000, description="Audio sample rate (24000 for CosyVoice 3, 44100 for Fish Speech)")
     streaming: bool = Field(default=True, description="Enable streaming synthesis")
     use_api: bool = Field(
         default=False,
@@ -61,6 +61,31 @@ class TTSSettings(BaseSettings):
     half_precision: bool = Field(default=True, description="Use FP16 for faster inference")
     compile_model: bool = Field(default=False, description="Use torch.compile for optimization")
     model_path: str | None = Field(default=None, description="Path to local model weights")
+    # CosyVoice 3-specific settings (TRUE streaming TTS with 150ms latency)
+    cosyvoice3_model_dir: str | None = Field(
+        default=None,
+        description="Path to CosyVoice 3 model directory (auto-downloads from HuggingFace if not set)",
+    )
+    cosyvoice3_reference_audio: str | None = Field(
+        default=None,
+        description="Path to reference audio for zero-shot voice cloning (15-30s recommended)",
+    )
+    cosyvoice3_reference_text: str | None = Field(
+        default=None,
+        description="Transcript of reference audio (improves voice cloning quality)",
+    )
+    cosyvoice3_default_emotion: str | None = Field(
+        default=None,
+        description="Default emotion for synthesis (excited, happy, sad, angry, neutral, etc.)",
+    )
+    cosyvoice3_load_vllm: bool = Field(
+        default=False,
+        description="Enable vLLM acceleration for CosyVoice 3 (requires vLLM 0.11+)",
+    )
+    cosyvoice3_load_trt: bool = Field(
+        default=False,
+        description="Enable TensorRT acceleration for CosyVoice 3",
+    )
 
     model_config = SettingsConfigDict(env_prefix="TTS_")
 
