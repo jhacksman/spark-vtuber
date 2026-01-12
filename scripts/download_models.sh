@@ -113,32 +113,30 @@ case $llm_choice in
         ;;
 esac
 
-# TTS models (CosyVoice 3)
+# TTS models (Fish Speech 1.5)
 echo ""
-log_info "=== TTS Models (CosyVoice 3) ==="
-log_info "CosyVoice model will download automatically on first use"
-log_info "Default model: FunAudioLLM/Fun-CosyVoice3-0.5B-2512 (~8GB)"
-log_info "Features: TRUE streaming (150ms latency), 100+ emotions, zero-shot voice cloning"
+log_info "=== TTS Models (Fish Speech 1.5) ==="
+log_info "Fish Speech model will download automatically on first use"
+log_info "Default model: fishaudio/openaudio-s1-mini (~12GB)"
 echo ""
-read -p "Pre-download CosyVoice model now? (y/n) " -n 1 -r
+read -p "Pre-download Fish Speech model now? (y/n) " -n 1 -r
 echo
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    log_info "Pre-downloading CosyVoice model..."
+    log_info "Pre-downloading Fish Speech model..."
 
     python3 << 'EOF'
 try:
     from huggingface_hub import snapshot_download
-    print("Downloading CosyVoice model (FunAudioLLM/Fun-CosyVoice3-0.5B-2512)...")
+    print("Downloading Fish Speech model (fishaudio/openaudio-s1-mini)...")
     snapshot_download(
-        repo_id="FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
-        local_dir="models/cosyvoice3-0.5b",
-        allow_patterns=["*.pt", "*.pth", "*.json", "*.yaml", "config.*", "*.safetensors"]
+        repo_id="fishaudio/openaudio-s1-mini",
+        local_dir="fish-speech-model"
     )
-    print("CosyVoice model downloaded successfully")
+    print("Fish Speech model downloaded successfully")
 except Exception as e:
-    print(f"Error downloading CosyVoice: {e}")
-    print("CosyVoice will be downloaded on first run")
+    print(f"Error downloading Fish Speech: {e}")
+    print("Fish Speech will be downloaded on first run")
 EOF
 fi
 

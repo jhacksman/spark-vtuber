@@ -88,7 +88,6 @@ async def _run_pipeline(
 ) -> None:
     """Run the streaming pipeline."""
     from spark_vtuber.llm.llama import QwenLLM
-    from spark_vtuber.tts.cosyvoice import CosyVoiceTTS
     from spark_vtuber.tts.fish_speech import FishSpeechTTS
     from spark_vtuber.tts.styletts2 import StyleTTS2
     from spark_vtuber.memory.chroma import ChromaMemory
@@ -106,19 +105,7 @@ async def _run_pipeline(
         max_model_len=settings.llm.context_length,
     )
 
-    if settings.tts.engine == "cosyvoice":
-        tts = CosyVoiceTTS(
-            sample_rate=settings.tts.sample_rate,
-            use_api=settings.tts.use_api,
-            api_key=settings.tts.api_key,
-            reference_audio_path=settings.tts.reference_audio_path,
-            model_name=settings.tts.model_name,
-            model_path=settings.tts.model_path,
-            device=settings.tts.device,
-            half_precision=settings.tts.half_precision,
-            compile_model=settings.tts.compile_model,
-        )
-    elif settings.tts.engine == "fish_speech":
+    if settings.tts.engine == "fish_speech":
         tts = FishSpeechTTS(
             sample_rate=settings.tts.sample_rate,
             use_api=settings.tts.use_api,
@@ -256,7 +243,6 @@ def test_tts(
 
 async def _test_tts(text: str, output: Path) -> None:
     """Run TTS test."""
-    from spark_vtuber.tts.cosyvoice import CosyVoiceTTS
     from spark_vtuber.tts.fish_speech import FishSpeechTTS
     from spark_vtuber.tts.styletts2 import StyleTTS2
     import soundfile as sf
@@ -266,19 +252,7 @@ async def _test_tts(text: str, output: Path) -> None:
     console.print(f"[yellow]Synthesizing: {text}[/yellow]")
     console.print(f"[cyan]Using TTS engine: {settings.tts.engine}[/cyan]")
 
-    if settings.tts.engine == "cosyvoice":
-        tts = CosyVoiceTTS(
-            sample_rate=settings.tts.sample_rate,
-            use_api=settings.tts.use_api,
-            api_key=settings.tts.api_key,
-            reference_audio_path=settings.tts.reference_audio_path,
-            model_name=settings.tts.model_name,
-            model_path=settings.tts.model_path,
-            device=settings.tts.device,
-            half_precision=settings.tts.half_precision,
-            compile_model=settings.tts.compile_model,
-        )
-    elif settings.tts.engine == "fish_speech":
+    if settings.tts.engine == "fish_speech":
         tts = FishSpeechTTS(
             sample_rate=settings.tts.sample_rate,
             use_api=settings.tts.use_api,

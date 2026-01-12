@@ -37,32 +37,29 @@ class LLMSettings(BaseSettings):
 class TTSSettings(BaseSettings):
     """Text-to-speech configuration settings."""
 
-    engine: Literal["cosyvoice", "fish_speech", "styletts2"] = Field(
-        default="cosyvoice",
-        description="TTS engine to use (cosyvoice recommended for streaming + quality)",
+    engine: Literal["fish_speech", "styletts2"] = Field(
+        default="fish_speech",
+        description="TTS engine to use (fish_speech recommended for production)",
     )
     model_name: str = Field(
-        default="FunAudioLLM/Fun-CosyVoice3-0.5B-2512",
-        description="CosyVoice model version (Fun-CosyVoice3-0.5B-2512 recommended)",
+        default="speech-1.5",
+        description="Fish Speech model version (speech-1.5 recommended)",
     )
-    voice_id: str | None = Field(default=None, description="Voice reference ID or audio file path")
-    reference_audio_path: str | None = Field(
-        default=None, description="Default reference audio file path for voice cloning"
-    )
-    sample_rate: int = Field(default=22050, description="Audio sample rate (22050 for CosyVoice)")
+    voice_id: str | None = Field(default=None, description="Voice reference ID for synthesis")
+    sample_rate: int = Field(default=44100, description="Audio sample rate (44100 for Fish Speech)")
     streaming: bool = Field(default=True, description="Enable streaming synthesis")
     use_api: bool = Field(
         default=False,
-        description="Use cloud API (set False for local inference)",
+        description="Use Fish Audio cloud API (set False for local inference)",
     )
     api_key: str | None = Field(
         default=None,
-        description="API key for cloud mode (or set COSYVOICE_API_KEY env var)",
+        description="Fish Audio API key (or set FISH_API_KEY env var)",
     )
     # Local inference settings
     device: str = Field(default="cuda", description="Device for local inference")
     half_precision: bool = Field(default=True, description="Use FP16 for faster inference")
-    compile_model: bool = Field(default=False, description="Use JIT compilation for optimization")
+    compile_model: bool = Field(default=False, description="Use torch.compile for optimization")
     model_path: str | None = Field(default=None, description="Path to local model weights")
 
     model_config = SettingsConfigDict(env_prefix="TTS_")
