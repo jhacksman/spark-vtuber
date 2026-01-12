@@ -288,27 +288,76 @@ def test_llm(
 
 
 async def _test_llm(prompt: str, max_tokens: int) -> None:
-    """Run LLM test."""
-    from spark_vtuber.llm.llama import QwenLLM
+    """Run LLM test using vLLM OpenAI API."""
+    import httpx
+    import os
 
     settings = get_settings()
 
+    # Use vLLM OpenAI API endpoint (default: localhost:8000)
+    vllm_base_url = os.environ.get("VLLM_API_URL", "http://localhost:8000/v1")
+    
     console.print(f"[yellow]Generating response for: {prompt}[/yellow]")
+    console.print(f"[cyan]Using vLLM API at: {vllm_base_url}[/cyan]")
 
-    llm = QwenLLM(
-        model_name=settings.llm.model_name,
-        quantization=settings.llm.quantization,
-    )
+    # First, get the model name from vLLM
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            models_response = await client.get(f"{vllm_base_url}/models")
+            models_response.raise_for_status()
+            models_data = models_response.json()
+            
+            if not models_data.get("data"):
+                console.print("[red]No models found on vLLM server[/red]")
+                console.print("[yellow]Make sure vLLM is running:[/yellow]")
+                console.print("  source ./vllm-install/vllm_env.sh")
+                console.print('  ./vllm-install/vllm-serve.sh "./models/qwen3-30b-a3b-awq" 8000')
+                return
+            
+            model_id = models_data["data"][0]["id"]
+            console.print(f"[cyan]Using model: {model_id}[/cyan]")
 
-    await llm.load()
+            # Make chat completion request with streaming
+            console.print("[cyan]Response:[/cyan]")
+            
+            async with client.stream(
+                "POST",
+                f"{vllm_base_url}/chat/completions",
+                json={
+                    "model": model_id,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "max_tokens": max_tokens,
+                    "temperature": settings.llm.temperature,
+                    "stream": True,
+                },
+                timeout=120.0,
+            ) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        data = line[6:]
+                        if data == "[DONE]":
+                            break
+                        try:
+                            import json
+                            chunk = json.loads(data)
+                            if chunk.get("choices") and chunk["choices"][0].get("delta", {}).get("content"):
+                                console.print(chunk["choices"][0]["delta"]["content"], end="")
+                        except json.JSONDecodeError:
+                            pass
+            
+            console.print()
 
-    console.print("[cyan]Response:[/cyan]")
-    async for token in llm.generate_stream(prompt, max_tokens=max_tokens):
-        console.print(token, end="")
-
-    console.print()
-
-    await llm.unload()
+    except httpx.ConnectError:
+        console.print("[red]Could not connect to vLLM server[/red]")
+        console.print("[yellow]Make sure vLLM is running:[/yellow]")
+        console.print("  source ./vllm-install/vllm_env.sh")
+        console.print('  ./vllm-install/vllm-serve.sh "./models/qwen3-30b-a3b-awq" 8000')
+    except httpx.HTTPStatusError as e:
+        console.print(f"[red]vLLM API error: {e.response.status_code}[/red]")
+        console.print(f"[red]{e.response.text}[/red]")
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
 
 
 @app.command()

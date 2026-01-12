@@ -36,6 +36,7 @@ dependencies = [
     # Chat Integration
     "irc>=20.0",
     "aiohttp>=3.9.0",
+    "httpx>=0.27.0",
     # Game Integration
     "pyautogui>=0.9.0",
     "pillow>=10.2.0",
