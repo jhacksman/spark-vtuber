@@ -116,28 +116,31 @@ esac
 # TTS models (Fish Speech 1.5)
 echo ""
 log_info "=== TTS Models (Fish Speech 1.5) ==="
-log_info "Fish Speech model will download automatically on first use"
-log_info "Default model: fishaudio/openaudio-s1-mini (~12GB)"
+log_info "Model: fishaudio/openaudio-s1-mini (~12GB)"
 echo ""
-read -p "Pre-download Fish Speech model now? (y/n) " -n 1 -r
-echo
 
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    log_info "Pre-downloading Fish Speech model..."
-
-    python3 << 'EOF'
-try:
-    from huggingface_hub import snapshot_download
-    print("Downloading Fish Speech model (fishaudio/openaudio-s1-mini)...")
-    snapshot_download(
-        repo_id="fishaudio/openaudio-s1-mini",
-        local_dir="fish-speech-model"
-    )
-    print("Fish Speech model downloaded successfully")
-except Exception as e:
-    print(f"Error downloading Fish Speech: {e}")
-    print("Fish Speech will be downloaded on first run")
-EOF
+if [ -d "openaudio-s1-mini" ] && [ "$(ls -A openaudio-s1-mini 2>/dev/null)" ]; then
+    log_warn "Fish Speech model already exists in openaudio-s1-mini"
+    read -p "Re-download? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        rm -rf "openaudio-s1-mini"
+        download_model \
+            "fishaudio/openaudio-s1-mini" \
+            "openaudio-s1-mini" \
+            "12"
+    else
+        log_info "Skipping Fish Speech model"
+    fi
+else
+    read -p "Download Fish Speech model now? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        download_model \
+            "fishaudio/openaudio-s1-mini" \
+            "openaudio-s1-mini" \
+            "12"
+    fi
 fi
 
 # STT models (Parakeet TDT 0.6B V2)
