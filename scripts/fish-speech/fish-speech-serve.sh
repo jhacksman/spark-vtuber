@@ -55,10 +55,14 @@ if [ ! -d "$VENV_DIR" ]; then
 fi
 
 # Check for model in multiple locations
-# Priority: 1) models/openaudio-s1-mini (from download_models.sh)
-#           2) fish-speech/checkpoints/openaudio-s1-mini (from install_fish_speech.sh)
+# Priority: 1) models/openaudio-s1-mini (new name from download_models.sh)
+#           2) models/fish-speech-model (old name from download_models.sh)
+#           3) fish-speech/checkpoints/openaudio-s1-mini (from install_fish_speech.sh)
 if [ -d "$REPO_ROOT/models/openaudio-s1-mini" ]; then
     MODEL_DIR="$REPO_ROOT/models/openaudio-s1-mini"
+    MODEL_PATH="$MODEL_DIR"
+elif [ -d "$REPO_ROOT/models/fish-speech-model" ]; then
+    MODEL_DIR="$REPO_ROOT/models/fish-speech-model"
     MODEL_PATH="$MODEL_DIR"
 elif [ -d "$FISH_SPEECH_DIR/checkpoints/openaudio-s1-mini" ]; then
     MODEL_DIR="$FISH_SPEECH_DIR/checkpoints/openaudio-s1-mini"
@@ -67,6 +71,7 @@ else
     log_error "Model not found!"
     log_info "Expected locations:"
     log_info "  - $REPO_ROOT/models/openaudio-s1-mini (from download_models.sh)"
+    log_info "  - $REPO_ROOT/models/fish-speech-model (legacy location)"
     log_info "  - $FISH_SPEECH_DIR/checkpoints/openaudio-s1-mini (from install_fish_speech.sh)"
     log_info ""
     log_info "Run download_models.sh or install_fish_speech.sh to download the model"
