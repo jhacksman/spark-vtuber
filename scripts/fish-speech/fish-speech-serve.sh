@@ -55,10 +55,14 @@ if [ ! -d "$VENV_DIR" ]; then
 fi
 
 # Check for model in multiple locations
-# Priority: 1) models/openaudio-s1-mini (from download_models.sh)
-#           2) fish-speech/checkpoints/openaudio-s1-mini (from install_fish_speech.sh)
+# Priority: 1) models/openaudio-s1-mini (new name from download_models.sh)
+#           2) models/fish-speech-model (old name from download_models.sh)
+#           3) fish-speech/checkpoints/openaudio-s1-mini (from install_fish_speech.sh)
 if [ -d "$REPO_ROOT/models/openaudio-s1-mini" ]; then
     MODEL_DIR="$REPO_ROOT/models/openaudio-s1-mini"
+    MODEL_PATH="$MODEL_DIR"
+elif [ -d "$REPO_ROOT/models/fish-speech-model" ]; then
+    MODEL_DIR="$REPO_ROOT/models/fish-speech-model"
     MODEL_PATH="$MODEL_DIR"
 elif [ -d "$FISH_SPEECH_DIR/checkpoints/openaudio-s1-mini" ]; then
     MODEL_DIR="$FISH_SPEECH_DIR/checkpoints/openaudio-s1-mini"
@@ -67,6 +71,7 @@ else
     log_error "Model not found!"
     log_info "Expected locations:"
     log_info "  - $REPO_ROOT/models/openaudio-s1-mini (from download_models.sh)"
+    log_info "  - $REPO_ROOT/models/fish-speech-model (legacy location)"
     log_info "  - $FISH_SPEECH_DIR/checkpoints/openaudio-s1-mini (from install_fish_speech.sh)"
     log_info ""
     log_info "Run download_models.sh or install_fish_speech.sh to download the model"
@@ -75,12 +80,17 @@ fi
 
 # Check GPU memory (Fish Speech needs ~12GB)
 if command -v nvidia-smi &> /dev/null; then
-    GPU_MEM_FREE=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -1)
-    GPU_MEM_TOTAL=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1)
-    log_info "GPU Memory: ${GPU_MEM_FREE}MB free / ${GPU_MEM_TOTAL}MB total"
-    if [[ "$GPU_MEM_FREE" -lt 12000 ]]; then
-        log_warning "Fish Speech needs ~12GB VRAM. Only ${GPU_MEM_FREE}MB free."
-        log_warning "If vLLM is running, you may need to stop it first or ensure enough memory."
+    GPU_MEM_FREE=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -1)
+    GPU_MEM_TOTAL=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1)
+    # Handle [N/A] or non-numeric values (e.g., on unified memory systems like DGX Spark)
+    if [[ "$GPU_MEM_FREE" =~ ^[0-9]+$ ]] && [[ "$GPU_MEM_TOTAL" =~ ^[0-9]+$ ]]; then
+        log_info "GPU Memory: ${GPU_MEM_FREE}MB free / ${GPU_MEM_TOTAL}MB total"
+        if [[ "$GPU_MEM_FREE" -lt 12000 ]]; then
+            log_warning "Fish Speech needs ~12GB VRAM. Only ${GPU_MEM_FREE}MB free."
+            log_warning "If vLLM is running, you may need to stop it first or ensure enough memory."
+        fi
+    else
+        log_info "GPU Memory: Unable to query (unified memory system)"
     fi
 fi
 
