@@ -80,12 +80,17 @@ fi
 
 # Check GPU memory (Fish Speech needs ~12GB)
 if command -v nvidia-smi &> /dev/null; then
-    GPU_MEM_FREE=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | head -1)
-    GPU_MEM_TOTAL=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -1)
-    log_info "GPU Memory: ${GPU_MEM_FREE}MB free / ${GPU_MEM_TOTAL}MB total"
-    if [[ "$GPU_MEM_FREE" -lt 12000 ]]; then
-        log_warning "Fish Speech needs ~12GB VRAM. Only ${GPU_MEM_FREE}MB free."
-        log_warning "If vLLM is running, you may need to stop it first or ensure enough memory."
+    GPU_MEM_FREE=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits 2>/dev/null | head -1)
+    GPU_MEM_TOTAL=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1)
+    # Handle [N/A] or non-numeric values (e.g., on unified memory systems like DGX Spark)
+    if [[ "$GPU_MEM_FREE" =~ ^[0-9]+$ ]] && [[ "$GPU_MEM_TOTAL" =~ ^[0-9]+$ ]]; then
+        log_info "GPU Memory: ${GPU_MEM_FREE}MB free / ${GPU_MEM_TOTAL}MB total"
+        if [[ "$GPU_MEM_FREE" -lt 12000 ]]; then
+            log_warning "Fish Speech needs ~12GB VRAM. Only ${GPU_MEM_FREE}MB free."
+            log_warning "If vLLM is running, you may need to stop it first or ensure enough memory."
+        fi
+    else
+        log_info "GPU Memory: Unable to query (unified memory system)"
     fi
 fi
 
