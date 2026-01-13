@@ -21,16 +21,35 @@ echo "  Spark VTuber Model Download Script"
 echo "================================================"
 echo ""
 
+# Ensure we have UV installed
+if ! command -v uv &> /dev/null; then
+    log_error "UV package manager not found"
+    log_info "Install with: curl -LsSf https://astral.sh/uv/install.sh | sh"
+    exit 1
+fi
+
+# Check for HuggingFace CLI (hf command from huggingface_hub)
+# Auto-install if missing using uvx (runs tools without permanent install)
+if ! command -v hf &> /dev/null; then
+    log_warn "hf command not found, installing huggingface-hub..."
+    uv tool install huggingface-hub[cli] || {
+        log_error "Failed to install huggingface-hub"
+        log_info "Try manually: uv tool install huggingface-hub[cli]"
+        exit 1
+    }
+    # Refresh PATH to find newly installed hf command
+    export PATH="$HOME/.local/bin:$PATH"
+    if ! command -v hf &> /dev/null; then
+        log_error "hf command still not found after install"
+        log_info "Try: export PATH=\"\$HOME/.local/bin:\$PATH\" and run again"
+        exit 1
+    fi
+    log_info "huggingface-hub installed successfully"
+fi
+
 # Create models directory
 mkdir -p models
 cd models
-
-# Check for HuggingFace CLI (hf command from huggingface_hub)
-if ! command -v hf &> /dev/null; then
-    log_error "hf command not found"
-    log_info "Install with: uv pip install huggingface-hub"
-    exit 1
-fi
 
 # Check if logged in to HuggingFace
 if ! hf auth whoami &> /dev/null; then
