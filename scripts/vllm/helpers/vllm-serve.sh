@@ -4,8 +4,28 @@
 
 set -e
 
-# Determine installation directory (where this script is located)
+# Determine script directory and find vLLM install directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Find the vLLM install directory
+# If running from helpers/, look for ../../../vllm-install
+# If running from install dir, use current dir
+if [[ -f "$SCRIPT_DIR/vllm_env.sh" ]]; then
+    # Running from install directory
+    VLLM_INSTALL_DIR="$SCRIPT_DIR"
+elif [[ -f "$SCRIPT_DIR/../../../vllm-install/vllm_env.sh" ]]; then
+    # Running from scripts/vllm/helpers/
+    VLLM_INSTALL_DIR="$(cd "$SCRIPT_DIR/../../../vllm-install" && pwd)"
+else
+    echo "ERROR: Cannot find vllm_env.sh"
+    echo "Expected locations:"
+    echo "  - $SCRIPT_DIR/vllm_env.sh (if running from install dir)"
+    echo "  - $SCRIPT_DIR/../../../vllm-install/vllm_env.sh (if running from repo)"
+    echo ""
+    echo "Make sure vLLM is installed. Run:"
+    echo "  ./scripts/vllm/install_vllm.sh --install-dir ./vllm-install"
+    exit 1
+fi
 
 # Configuration
 MODEL="${1:-Qwen/Qwen2.5-0.5B-Instruct}"
@@ -19,8 +39,8 @@ if [[ "$MODEL" == ./* ]] || [[ "$MODEL" == ../* ]]; then
     MODEL="$(cd "$ORIGINAL_PWD" && realpath "$MODEL")"
     echo "INFO: Converted relative path to absolute: $MODEL"
 fi
-VLLM_DIR="$SCRIPT_DIR/vllm"
-ENV_SCRIPT="$SCRIPT_DIR/vllm_env.sh"
+VLLM_DIR="$VLLM_INSTALL_DIR/vllm"
+ENV_SCRIPT="$VLLM_INSTALL_DIR/vllm_env.sh"
 PID_FILE="$SCRIPT_DIR/.vllm-server.pid"
 LOG_FILE="$SCRIPT_DIR/vllm-server.log"
 MAX_WAIT_SECONDS=300  # 5 minutes max wait for model loading
