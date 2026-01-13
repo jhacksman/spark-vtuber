@@ -54,11 +54,22 @@ if [ ! -d "$VENV_DIR" ]; then
     exit 1
 fi
 
-# Check for model
-MODEL_DIR="$FISH_SPEECH_DIR/checkpoints/openaudio-s1-mini"
-if [ ! -d "$MODEL_DIR" ]; then
-    log_error "Model not found at $MODEL_DIR"
-    log_info "Run install_fish_speech.sh to download the model"
+# Check for model in multiple locations
+# Priority: 1) models/openaudio-s1-mini (from download_models.sh)
+#           2) fish-speech/checkpoints/openaudio-s1-mini (from install_fish_speech.sh)
+if [ -d "$REPO_ROOT/models/openaudio-s1-mini" ]; then
+    MODEL_DIR="$REPO_ROOT/models/openaudio-s1-mini"
+    MODEL_PATH="$MODEL_DIR"
+elif [ -d "$FISH_SPEECH_DIR/checkpoints/openaudio-s1-mini" ]; then
+    MODEL_DIR="$FISH_SPEECH_DIR/checkpoints/openaudio-s1-mini"
+    MODEL_PATH="checkpoints/openaudio-s1-mini"
+else
+    log_error "Model not found!"
+    log_info "Expected locations:"
+    log_info "  - $REPO_ROOT/models/openaudio-s1-mini (from download_models.sh)"
+    log_info "  - $FISH_SPEECH_DIR/checkpoints/openaudio-s1-mini (from install_fish_speech.sh)"
+    log_info ""
+    log_info "Run download_models.sh or install_fish_speech.sh to download the model"
     exit 1
 fi
 
@@ -95,7 +106,7 @@ log_info ""
 # Run the API server
 exec python -m tools.api_server \
     --listen "0.0.0.0:$PORT" \
-    --llama-checkpoint-path "checkpoints/openaudio-s1-mini" \
-    --decoder-checkpoint-path "checkpoints/openaudio-s1-mini/codec.pth" \
+    --llama-checkpoint-path "$MODEL_PATH" \
+    --decoder-checkpoint-path "$MODEL_PATH/codec.pth" \
     --decoder-config-name "modded_dac_vq" \
     --compile
