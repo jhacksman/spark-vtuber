@@ -26,7 +26,9 @@ NC='\033[0m'
 
 # Default configuration
 INSTALL_DIR="$PWD/fish-speech-install"
-PYTHON_VERSION="3.11"
+# Python 3.12 required for DGX Spark - cu130 ARM64 wheels only available for 3.12
+# Using 3.11 will fall back to CPU-only PyTorch 2.0.1 which lacks weight_norm in parametrizations
+PYTHON_VERSION="3.12"
 SKIP_MODEL=false
 FISH_SPEECH_REPO="https://github.com/fishaudio/fish-speech.git"
 
