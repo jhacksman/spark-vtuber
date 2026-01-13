@@ -52,13 +52,16 @@ echo "PID file: $PID_FILE"
 echo "=" | tr '=' '-' | head -c 70 && echo
 
 # Start server in background
+# Note: DGX Spark uses unified memory (UMA) where GPU/CPU share 128GB.
+# Using 0.5 (~64GB) leaves room for Fish Speech TTS (~12GB) and other processes.
+# See: https://nvidia.custhelp.com/app/answers/detail/a_id/5728
 cd "$VLLM_DIR"
 nohup python -m vllm.entrypoints.openai.api_server \
     --model "$MODEL" \
     --trust-remote-code \
     --host 0.0.0.0 \
     --port "$PORT" \
-    --gpu-memory-utilization 0.9 \
+    --gpu-memory-utilization 0.5 \
     > "$LOG_FILE" 2>&1 &
 
 # Save PID
