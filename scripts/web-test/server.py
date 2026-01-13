@@ -189,6 +189,21 @@ async def vllm_health(url: str | None = None):
             return {"status": "error", "error": str(e)}
 
 
+@app.get("/api/vllm/models")
+async def vllm_models(url: str | None = None):
+    """Get available models from vLLM server."""
+    vllm_url = url or VLLM_URL
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            response = await client.get(f"{vllm_url}/v1/models")
+            response.raise_for_status()
+            data = response.json()
+            models = [m["id"] for m in data.get("data", [])]
+            return {"status": "ok", "models": models}
+        except httpx.HTTPError as e:
+            return {"status": "error", "error": str(e), "models": []}
+
+
 @app.get("/api/tts/health")
 async def tts_health(url: str | None = None):
     """Check Fish Speech TTS server health."""
