@@ -113,10 +113,21 @@ log_info ""
 log_success "Server starting... (Ctrl+C to stop)"
 log_info ""
 
+# Check if we should disable torch.compile (Triton)
+# DGX Spark (GB10/SM 12.1a) has issues with Triton's bundled ptxas not supporting sm_121a
+# Disable compilation by default for compatibility, can be re-enabled with --compile flag
+COMPILE_FLAG=""
+if [ "${FISH_SPEECH_COMPILE:-0}" = "1" ]; then
+    log_info "torch.compile enabled (FISH_SPEECH_COMPILE=1)"
+    COMPILE_FLAG="--compile"
+else
+    log_info "torch.compile disabled for DGX Spark compatibility (set FISH_SPEECH_COMPILE=1 to enable)"
+fi
+
 # Run the API server
 exec python -m tools.api_server \
     --listen "0.0.0.0:$PORT" \
     --llama-checkpoint-path "$MODEL_PATH" \
     --decoder-checkpoint-path "$MODEL_PATH/codec.pth" \
     --decoder-config-name "modded_dac_vq" \
-    --compile
+    $COMPILE_FLAG
