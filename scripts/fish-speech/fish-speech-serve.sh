@@ -98,6 +98,14 @@ fi
 log_info "Activating Fish Speech environment..."
 source "$VENV_DIR/bin/activate"
 
+# Set TRITON_PTXAS_PATH to use system ptxas for DGX Spark (GB10/SM 12.1a) compatibility
+# The bundled ptxas in Triton doesn't support sm_121a, but the system ptxas from CUDA 13.0 does
+# See: https://github.com/pytorch/pytorch/issues/163801
+if [ -f "/usr/local/cuda/bin/ptxas" ]; then
+    export TRITON_PTXAS_PATH="/usr/local/cuda/bin/ptxas"
+    log_info "Using system ptxas for Triton: $TRITON_PTXAS_PATH"
+fi
+
 # Change to Fish Speech directory
 cd "$FISH_SPEECH_DIR"
 
