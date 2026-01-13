@@ -262,6 +262,28 @@ setup_fish_speech() {
     log_info "Creating Python $PYTHON_VERSION virtual environment..."
     uv venv "$VENV_DIR" --python "$PYTHON_VERSION"
 
+    # Patch Fish Speech for torchaudio 2.9+ compatibility
+    # torchaudio.list_audio_backends() was removed in 2.9, but Fish Speech still uses it
+    # The fix is to remove the backend selection code since torchaudio 2.9+ handles this automatically
+    log_info "Patching Fish Speech for torchaudio 2.9+ compatibility..."
+    
+    # Patch reference_loader.py
+    REFERENCE_LOADER="$FISH_SPEECH_DIR/fish_speech/inference_engine/reference_loader.py"
+    if [ -f "$REFERENCE_LOADER" ]; then
+        # Replace the list_audio_backends() call with a simple default
+        sed -i 's/backends = torchaudio.list_audio_backends()/# torchaudio 2.9+ removed list_audio_backends(), use default backend/g' "$REFERENCE_LOADER"
+        sed -i 's/if "ffmpeg" in backends:/if True:  # Default to ffmpeg backend/g' "$REFERENCE_LOADER"
+        log_success "Patched reference_loader.py"
+    fi
+    
+    # Patch extract_vq.py if it exists
+    EXTRACT_VQ="$FISH_SPEECH_DIR/tools/vqgan/extract_vq.py"
+    if [ -f "$EXTRACT_VQ" ]; then
+        sed -i 's/backends = torchaudio.list_audio_backends()/# torchaudio 2.9+ removed list_audio_backends(), use default backend/g' "$EXTRACT_VQ"
+        sed -i 's/if "ffmpeg" in backends:/if True:  # Default to ffmpeg backend/g' "$EXTRACT_VQ"
+        log_success "Patched extract_vq.py"
+    fi
+
     log_success "Fish Speech cloned and virtual environment created"
 }
 
@@ -285,11 +307,12 @@ install_fish_speech() {
     
     if [[ "$CUDA_MAJOR" -ge 13 ]]; then
         log_info "CUDA 13.0+ detected, using cu130 PyTorch wheels (required for GB10 SM 12.1)..."
-        # Pin torchaudio<2.9 because Fish Speech uses list_audio_backends() which was removed in 2.9
-        uv pip install torch torchvision "torchaudio<2.9" --index-url https://download.pytorch.org/whl/cu130
+        # Note: torchaudio 2.9+ is required for Python 3.12 ARM64 wheels
+        # Fish Speech is patched below to work with torchaudio 2.9+
+        uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu130
     else
         log_info "Using cu126 PyTorch wheels..."
-        uv pip install torch torchvision "torchaudio<2.9" --index-url https://download.pytorch.org/whl/cu126
+        uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
     fi
 
     # Verify PyTorch
