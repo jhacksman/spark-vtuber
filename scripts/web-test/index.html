@@ -52,22 +52,58 @@
             font-size: 0.9rem;
         }
 
-        .status-bar {
+        .config-section {
+            background: var(--bg-secondary);
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .config-row {
             display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-bottom: 30px;
+            gap: 15px;
+            align-items: flex-end;
             flex-wrap: wrap;
         }
 
-        .status-item {
+        .config-item {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: var(--bg-secondary);
-            border-radius: 20px;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .config-item label {
             font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .config-item input,
+        .config-item select {
+            padding: 10px 12px;
+            border: none;
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .config-item input:focus,
+        .config-item select:focus {
+            outline: 2px solid var(--accent);
+        }
+
+        .config-item select:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .config-item .status-dot {
+            position: absolute;
+            right: 10px;
+            bottom: 12px;
         }
 
         .status-dot {
@@ -354,14 +390,25 @@
             <p class="subtitle">vLLM + Fish Speech Pipeline Tester</p>
         </header>
 
-        <div class="status-bar">
-            <div class="status-item">
-                <div class="status-dot" id="vllm-status"></div>
-                <span>vLLM</span>
-            </div>
-            <div class="status-item">
-                <div class="status-dot" id="tts-status"></div>
-                <span>Fish Speech</span>
+        <div class="config-section">
+            <div class="config-row">
+                <div class="config-item">
+                    <label for="vllm-url">vLLM URL:</label>
+                    <input type="text" id="vllm-url" placeholder="http://localhost:8000" value="http://localhost:8000">
+                    <div class="status-dot" id="vllm-status"></div>
+                </div>
+                <div class="config-item">
+                    <label for="tts-url">Fish Speech URL:</label>
+                    <input type="text" id="tts-url" placeholder="http://localhost:8843" value="http://localhost:8843">
+                    <div class="status-dot" id="tts-status"></div>
+                </div>
+                <div class="config-item">
+                    <label for="model-name">Model:</label>
+                    <select id="model-name" disabled>
+                        <option value="">-- Connect to vLLM first --</option>
+                    </select>
+                </div>
+                <button class="btn btn-secondary" onclick="saveConfig()">Save & Check</button>
             </div>
         </div>
 
@@ -419,21 +466,106 @@
     </div>
 
     <script>
+        // Load saved config from localStorage
+        function loadConfig() {
+            const vllmUrl = localStorage.getItem('vllm_url') || 'http://localhost:8000';
+            const ttsUrl = localStorage.getItem('tts_url') || 'http://localhost:8843';
+            
+            document.getElementById('vllm-url').value = vllmUrl;
+            document.getElementById('tts-url').value = ttsUrl;
+        }
+
+        // Save config and check health
+        function saveConfig() {
+            const vllmUrl = document.getElementById('vllm-url').value.trim();
+            const ttsUrl = document.getElementById('tts-url').value.trim();
+            const modelSelect = document.getElementById('model-name');
+            const modelName = modelSelect.value;
+            
+            localStorage.setItem('vllm_url', vllmUrl);
+            localStorage.setItem('tts_url', ttsUrl);
+            if (modelName) {
+                localStorage.setItem('model_name', modelName);
+            }
+            
+            checkHealth();
+        }
+
+        // Get current config
+        function getConfig() {
+            return {
+                vllm_url: document.getElementById('vllm-url').value.trim(),
+                tts_url: document.getElementById('tts-url').value.trim(),
+                model_name: document.getElementById('model-name').value
+            };
+        }
+
+        // Fetch available models from vLLM
+        async function fetchModels(vllmUrl) {
+            const modelSelect = document.getElementById('model-name');
+            const savedModel = localStorage.getItem('model_name');
+            
+            try {
+                const res = await fetch('/api/vllm/models?url=' + encodeURIComponent(vllmUrl));
+                const data = await res.json();
+                
+                if (data.status === 'ok' && data.models && data.models.length > 0) {
+                    modelSelect.innerHTML = '';
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        if (model === savedModel) {
+                            option.selected = true;
+                        }
+                        modelSelect.appendChild(option);
+                    });
+                    modelSelect.disabled = false;
+                    
+                    // Save first model if none saved
+                    if (!savedModel && data.models.length > 0) {
+                        localStorage.setItem('model_name', data.models[0]);
+                    }
+                } else {
+                    modelSelect.innerHTML = '<option value="">-- No models found --</option>';
+                    modelSelect.disabled = true;
+                }
+            } catch (e) {
+                modelSelect.innerHTML = '<option value="">-- Failed to fetch models --</option>';
+                modelSelect.disabled = true;
+            }
+        }
+
         // Check service health on load
         async function checkHealth() {
+            const config = getConfig();
+            let vllmOk = false;
+            
             // Check vLLM
+            document.getElementById('vllm-status').className = 'status-dot loading';
             try {
-                const vllmRes = await fetch('/api/vllm/health');
+                const vllmRes = await fetch('/api/vllm/health?url=' + encodeURIComponent(config.vllm_url));
                 const vllmData = await vllmRes.json();
+                vllmOk = vllmData.status === 'ok';
                 document.getElementById('vllm-status').className = 
-                    'status-dot ' + (vllmData.status === 'ok' ? 'ok' : 'error');
+                    'status-dot ' + (vllmOk ? 'ok' : 'error');
             } catch (e) {
                 document.getElementById('vllm-status').className = 'status-dot error';
             }
 
+            // Fetch models if vLLM is healthy
+            if (vllmOk) {
+                await fetchModels(config.vllm_url);
+            } else {
+                const modelSelect = document.getElementById('model-name');
+                modelSelect.innerHTML = '<option value="">-- Connect to vLLM first --</option>';
+                modelSelect.disabled = true;
+            }
+
             // Check TTS
+            document.getElementById('tts-status').className = 'status-dot loading';
             try {
-                const ttsRes = await fetch('/api/tts/health');
+                const ttsRes = await fetch('/api/tts/health?url=' + encodeURIComponent(config.tts_url));
                 const ttsData = await ttsRes.json();
                 document.getElementById('tts-status').className = 
                     'status-dot ' + (ttsData.status === 'ok' ? 'ok' : 'error');
@@ -450,6 +582,7 @@
                 return;
             }
 
+            const config = getConfig();
             const stripThink = document.getElementById('strip-think').checked;
             const submitBtn = document.getElementById('submit-btn');
             const loading = document.getElementById('loading-overlay');
@@ -469,7 +602,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message: message,
-                        strip_think_tags: stripThink
+                        strip_think_tags: stripThink,
+                        vllm_url: config.vllm_url,
+                        tts_url: config.tts_url,
+                        model_name: config.model_name
                     })
                 });
 
@@ -543,7 +679,8 @@
             }
         });
 
-        // Check health on load
+        // Load config and check health on load
+        loadConfig();
         checkHealth();
         // Refresh health every 30 seconds
         setInterval(checkHealth, 30000);
