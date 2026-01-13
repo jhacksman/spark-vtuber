@@ -52,22 +52,51 @@
             font-size: 0.9rem;
         }
 
-        .status-bar {
+        .config-section {
+            background: var(--bg-secondary);
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .config-row {
             display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-bottom: 30px;
+            gap: 15px;
+            align-items: flex-end;
             flex-wrap: wrap;
         }
 
-        .status-item {
+        .config-item {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: var(--bg-secondary);
-            border-radius: 20px;
+            flex-direction: column;
+            gap: 5px;
+            flex: 1;
+            min-width: 200px;
+            position: relative;
+        }
+
+        .config-item label {
             font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .config-item input {
+            padding: 10px 12px;
+            border: none;
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .config-item input:focus {
+            outline: 2px solid var(--accent);
+        }
+
+        .config-item .status-dot {
+            position: absolute;
+            right: 10px;
+            bottom: 12px;
         }
 
         .status-dot {
@@ -354,14 +383,23 @@
             <p class="subtitle">vLLM + Fish Speech Pipeline Tester</p>
         </header>
 
-        <div class="status-bar">
-            <div class="status-item">
-                <div class="status-dot" id="vllm-status"></div>
-                <span>vLLM</span>
-            </div>
-            <div class="status-item">
-                <div class="status-dot" id="tts-status"></div>
-                <span>Fish Speech</span>
+        <div class="config-section">
+            <div class="config-row">
+                <div class="config-item">
+                    <label for="vllm-url">vLLM URL:</label>
+                    <input type="text" id="vllm-url" placeholder="http://localhost:8000" value="http://localhost:8000">
+                    <div class="status-dot" id="vllm-status"></div>
+                </div>
+                <div class="config-item">
+                    <label for="tts-url">Fish Speech URL:</label>
+                    <input type="text" id="tts-url" placeholder="http://localhost:8843" value="http://localhost:8843">
+                    <div class="status-dot" id="tts-status"></div>
+                </div>
+                <div class="config-item">
+                    <label for="model-name">Model Name:</label>
+                    <input type="text" id="model-name" placeholder="qwen3-30b-a3b-awq" value="qwen3-30b-a3b-awq">
+                </div>
+                <button class="btn btn-secondary" onclick="saveConfig()">Save & Check</button>
             </div>
         </div>
 
@@ -419,11 +457,47 @@
     </div>
 
     <script>
+        // Load saved config from localStorage
+        function loadConfig() {
+            const vllmUrl = localStorage.getItem('vllm_url') || 'http://localhost:8000';
+            const ttsUrl = localStorage.getItem('tts_url') || 'http://localhost:8843';
+            const modelName = localStorage.getItem('model_name') || 'qwen3-30b-a3b-awq';
+            
+            document.getElementById('vllm-url').value = vllmUrl;
+            document.getElementById('tts-url').value = ttsUrl;
+            document.getElementById('model-name').value = modelName;
+        }
+
+        // Save config and check health
+        function saveConfig() {
+            const vllmUrl = document.getElementById('vllm-url').value.trim();
+            const ttsUrl = document.getElementById('tts-url').value.trim();
+            const modelName = document.getElementById('model-name').value.trim();
+            
+            localStorage.setItem('vllm_url', vllmUrl);
+            localStorage.setItem('tts_url', ttsUrl);
+            localStorage.setItem('model_name', modelName);
+            
+            checkHealth();
+        }
+
+        // Get current config
+        function getConfig() {
+            return {
+                vllm_url: document.getElementById('vllm-url').value.trim(),
+                tts_url: document.getElementById('tts-url').value.trim(),
+                model_name: document.getElementById('model-name').value.trim()
+            };
+        }
+
         // Check service health on load
         async function checkHealth() {
+            const config = getConfig();
+            
             // Check vLLM
+            document.getElementById('vllm-status').className = 'status-dot loading';
             try {
-                const vllmRes = await fetch('/api/vllm/health');
+                const vllmRes = await fetch('/api/vllm/health?url=' + encodeURIComponent(config.vllm_url));
                 const vllmData = await vllmRes.json();
                 document.getElementById('vllm-status').className = 
                     'status-dot ' + (vllmData.status === 'ok' ? 'ok' : 'error');
@@ -432,8 +506,9 @@
             }
 
             // Check TTS
+            document.getElementById('tts-status').className = 'status-dot loading';
             try {
-                const ttsRes = await fetch('/api/tts/health');
+                const ttsRes = await fetch('/api/tts/health?url=' + encodeURIComponent(config.tts_url));
                 const ttsData = await ttsRes.json();
                 document.getElementById('tts-status').className = 
                     'status-dot ' + (ttsData.status === 'ok' ? 'ok' : 'error');
@@ -450,6 +525,7 @@
                 return;
             }
 
+            const config = getConfig();
             const stripThink = document.getElementById('strip-think').checked;
             const submitBtn = document.getElementById('submit-btn');
             const loading = document.getElementById('loading-overlay');
@@ -469,7 +545,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message: message,
-                        strip_think_tags: stripThink
+                        strip_think_tags: stripThink,
+                        vllm_url: config.vllm_url,
+                        tts_url: config.tts_url,
+                        model_name: config.model_name
                     })
                 });
 
@@ -543,7 +622,8 @@
             }
         });
 
-        // Check health on load
+        // Load config and check health on load
+        loadConfig();
         checkHealth();
         // Refresh health every 30 seconds
         setInterval(checkHealth, 30000);

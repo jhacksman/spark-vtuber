@@ -42,6 +42,9 @@ MODEL_NAME = "qwen3-30b-a3b-awq"
 class ChatRequest(BaseModel):
     message: str
     strip_think_tags: bool = True
+    vllm_url: str | None = None
+    tts_url: str | None = None
+    model_name: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -82,14 +85,19 @@ async def chat(request: ChatRequest):
     3. Send response to Fish Speech for TTS
     4. Return audio URL and timing stats
     """
+    # Use request URLs if provided, otherwise fall back to defaults
+    vllm_url = request.vllm_url or VLLM_URL
+    tts_url = request.tts_url or TTS_URL
+    model_name = request.model_name or MODEL_NAME
+    
     async with httpx.AsyncClient(timeout=120.0) as client:
         # Step 1: Get LLM response from vLLM
         llm_start = time.time()
         try:
             llm_response = await client.post(
-                f"{VLLM_URL}/v1/chat/completions",
+                f"{vllm_url}/v1/chat/completions",
                 json={
-                    "model": MODEL_NAME,
+                    "model": model_name,
                     "messages": [
                         {"role": "user", "content": request.message}
                     ],
@@ -117,7 +125,7 @@ async def chat(request: ChatRequest):
         tts_start = time.time()
         try:
             tts_response = await client.post(
-                f"{TTS_URL}/v1/tts",
+                f"{tts_url}/v1/tts",
                 json={
                     "text": llm_text,
                     "format": "wav",
@@ -170,22 +178,24 @@ async def tts_only(text: str):
 
 
 @app.get("/api/vllm/health")
-async def vllm_health():
+async def vllm_health(url: str | None = None):
     """Check vLLM server health."""
+    vllm_url = url or VLLM_URL
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
-            response = await client.get(f"{VLLM_URL}/health")
+            response = await client.get(f"{vllm_url}/health")
             return {"status": "ok", "vllm_status": response.status_code}
         except httpx.HTTPError as e:
             return {"status": "error", "error": str(e)}
 
 
 @app.get("/api/tts/health")
-async def tts_health():
+async def tts_health(url: str | None = None):
     """Check Fish Speech TTS server health."""
+    tts_url = url or TTS_URL
     async with httpx.AsyncClient(timeout=5.0) as client:
         try:
-            response = await client.get(f"{TTS_URL}/v1/health")
+            response = await client.get(f"{tts_url}/v1/health")
             return {"status": "ok", "tts_status": response.status_code}
         except httpx.HTTPError as e:
             return {"status": "error", "error": str(e)}
