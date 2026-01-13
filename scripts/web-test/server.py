@@ -11,6 +11,7 @@ Usage:
 
 import argparse
 import asyncio
+import base64
 import io
 import re
 import time
@@ -37,6 +38,11 @@ app.add_middleware(
 VLLM_URL = "http://localhost:8000"
 TTS_URL = "http://localhost:8843"
 MODEL_NAME = "qwen3-30b-a3b-awq"
+REFERENCE_AUDIO_PATH: Path | None = None
+REFERENCE_AUDIO_TEXT = ""
+
+# Transcript of the reference audio for voice cloning
+DEFAULT_REFERENCE_TEXT = """got off stream. I think I should never stream again, the amount of luck we have. So we were able to hatch a very good Gibble, as you can see here. But we also caught something last- oh, we also got a pretty good Fungus. Um, this Fungus is interesting. It has a speed stat of zero, which means it's very good in Trick Room. Defensive stats are nearly maxed out. Its HP is above average, slightly, just about average."""
 
 
 class ChatRequest(BaseModel):
@@ -126,17 +132,28 @@ async def chat(request: ChatRequest):
         audio_base64 = None
         tts_error = None
         try:
+            # Build TTS request with optional reference audio for consistent voice
+            tts_payload: dict = {
+                "text": llm_text,
+                "format": "wav",
+                "streaming": False,
+            }
+            
+            # Add reference audio if configured (for consistent voice cloning)
+            if REFERENCE_AUDIO_PATH and REFERENCE_AUDIO_PATH.exists():
+                ref_audio_bytes = REFERENCE_AUDIO_PATH.read_bytes()
+                ref_audio_b64 = base64.b64encode(ref_audio_bytes).decode("utf-8")
+                tts_payload["references"] = [{
+                    "audio": ref_audio_b64,
+                    "text": REFERENCE_AUDIO_TEXT or DEFAULT_REFERENCE_TEXT,
+                }]
+            
             tts_response = await client.post(
                 f"{tts_url}/v1/tts",
-                json={
-                    "text": llm_text,
-                    "format": "wav",
-                    "streaming": False,
-                },
+                json=tts_payload,
             )
             tts_response.raise_for_status()
             audio_data = tts_response.content
-            import base64
             audio_base64 = base64.b64encode(audio_data).decode("utf-8")
         except httpx.HTTPError as e:
             tts_error = str(e)
@@ -218,7 +235,7 @@ async def tts_health(url: str | None = None):
 
 
 def main():
-    global VLLM_URL, TTS_URL, MODEL_NAME
+    global VLLM_URL, TTS_URL, MODEL_NAME, REFERENCE_AUDIO_PATH, REFERENCE_AUDIO_TEXT
     
     parser = argparse.ArgumentParser(description="TTS Test Interface Server")
     parser.add_argument("--port", type=int, default=8844, help="Server port (default: 8844)")
@@ -226,16 +243,36 @@ def main():
     parser.add_argument("--vllm-url", type=str, default="http://localhost:8000", help="vLLM server URL")
     parser.add_argument("--tts-url", type=str, default="http://localhost:8843", help="Fish Speech TTS server URL")
     parser.add_argument("--model", type=str, default="qwen3-30b-a3b-awq", help="vLLM model name")
+    parser.add_argument("--reference-audio", type=str, default=None, 
+                        help="Path to reference audio file for consistent voice cloning")
+    parser.add_argument("--reference-text", type=str, default=None,
+                        help="Transcript of the reference audio (optional, uses default if not provided)")
     args = parser.parse_args()
 
     VLLM_URL = args.vllm_url
     TTS_URL = args.tts_url
     MODEL_NAME = args.model
+    
+    # Set up reference audio for voice cloning
+    if args.reference_audio:
+        REFERENCE_AUDIO_PATH = Path(args.reference_audio)
+        if not REFERENCE_AUDIO_PATH.exists():
+            print(f"Warning: Reference audio file not found: {args.reference_audio}")
+            REFERENCE_AUDIO_PATH = None
+        else:
+            print(f"Reference Audio: {REFERENCE_AUDIO_PATH}")
+    
+    if args.reference_text:
+        REFERENCE_AUDIO_TEXT = args.reference_text
 
     print(f"Starting TTS Test Interface on http://{args.host}:{args.port}")
     print(f"vLLM URL: {VLLM_URL}")
     print(f"TTS URL: {TTS_URL}")
     print(f"Model: {MODEL_NAME}")
+    if REFERENCE_AUDIO_PATH:
+        print(f"Voice Cloning: Enabled (using {REFERENCE_AUDIO_PATH.name})")
+    else:
+        print("Voice Cloning: Disabled (random voice each time)")
     print()
 
     import uvicorn
