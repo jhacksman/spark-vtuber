@@ -621,13 +621,22 @@
                 document.getElementById('response-section').style.display = 'block';
                 document.getElementById('response-content').textContent = data.llm_response;
                 document.getElementById('llm-timing').textContent = `LLM: ${data.llm_latency_ms}ms`;
-                document.getElementById('tts-timing').textContent = `TTS: ${data.tts_latency_ms}ms`;
+                document.getElementById('tts-timing').textContent = data.tts_latency_ms ? `TTS: ${data.tts_latency_ms}ms` : 'TTS: N/A';
 
-                // Play audio
+                // Show TTS error as warning if LLM succeeded but TTS failed
+                if (data.tts_error) {
+                    showError(`TTS unavailable: ${data.tts_error} (LLM response shown below)`);
+                }
+
+                // Play audio if available
+                const audioPlayer = document.getElementById('audio-player');
                 if (data.audio_base64) {
-                    const audioPlayer = document.getElementById('audio-player');
                     audioPlayer.src = `data:audio/wav;base64,${data.audio_base64}`;
                     audioPlayer.load();
+                    audioPlayer.style.display = 'block';
+                } else {
+                    audioPlayer.src = '';
+                    audioPlayer.style.display = 'none';
                 }
 
                 // Update debug
@@ -636,6 +645,7 @@
                     llm_response: data.llm_response,
                     llm_latency_ms: data.llm_latency_ms,
                     tts_latency_ms: data.tts_latency_ms,
+                    tts_error: data.tts_error,
                     audio_format: data.audio_format
                 }, null, 2);
 

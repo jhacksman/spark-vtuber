@@ -121,8 +121,10 @@ async def chat(request: ChatRequest):
         else:
             llm_text = llm_raw_text
 
-        # Step 3: Generate TTS audio
+        # Step 3: Generate TTS audio (optional - don't fail if TTS is down)
         tts_start = time.time()
+        audio_base64 = None
+        tts_error = None
         try:
             tts_response = await client.post(
                 f"{tts_url}/v1/tts",
@@ -134,23 +136,22 @@ async def chat(request: ChatRequest):
             )
             tts_response.raise_for_status()
             audio_data = tts_response.content
+            import base64
+            audio_base64 = base64.b64encode(audio_data).decode("utf-8")
         except httpx.HTTPError as e:
-            raise HTTPException(status_code=502, detail=f"TTS error: {str(e)}")
+            tts_error = str(e)
         
         tts_latency = (time.time() - tts_start) * 1000
 
-        # Step 4: Store audio and return response
-        # For simplicity, we'll return the audio as base64 in the response
-        import base64
-        audio_base64 = base64.b64encode(audio_data).decode("utf-8")
-
+        # Step 4: Return response (with or without audio)
         return {
             "llm_response": llm_text,
             "llm_raw_response": llm_raw_text,
             "llm_latency_ms": round(llm_latency, 2),
-            "tts_latency_ms": round(tts_latency, 2),
+            "tts_latency_ms": round(tts_latency, 2) if audio_base64 else None,
             "audio_base64": audio_base64,
-            "audio_format": "wav",
+            "audio_format": "wav" if audio_base64 else None,
+            "tts_error": tts_error,
         }
 
 
