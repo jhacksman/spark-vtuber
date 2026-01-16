@@ -148,8 +148,8 @@ stop_process "Fish Speech" "$PID_DIR/fish-speech.pid" $FISH_PORT
 ################################################################################
 # 3. Stop vLLM Server
 ################################################################################
-# vLLM has its own PID file in the install directory
-VLLM_PID_FILE="$VLLM_INSTALL_DIR/helpers/.vllm-server.pid"
+# vLLM has its own PID file in the install directory root
+VLLM_PID_FILE="$VLLM_INSTALL_DIR/.vllm-server.pid"
 stop_process "vLLM" "$VLLM_PID_FILE" $VLLM_PORT
 
 # Also clean up the launcher PID if it exists

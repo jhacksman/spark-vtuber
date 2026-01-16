@@ -117,8 +117,9 @@ if [ ! -d "$MODEL_PATH" ]; then
 fi
 
 # Source vLLM environment and start server
+# Note: vllm_env.sh and vllm-serve.sh are in the install dir root, not in helpers/
 (
-    cd "$VLLM_INSTALL_DIR/helpers"
+    cd "$VLLM_INSTALL_DIR"
     source ./vllm_env.sh
     
     # The vllm-serve.sh script handles PID tracking internally
@@ -151,7 +152,7 @@ done
 
 if [ $VLLM_WAIT -ge $VLLM_MAX_WAIT ]; then
     log_error "vLLM did not start within ${VLLM_MAX_WAIT} seconds"
-    log_info "Check logs: tail -f $VLLM_INSTALL_DIR/helpers/vllm-server.log"
+    log_info "Check logs: tail -f $VLLM_INSTALL_DIR/vllm-server.log"
     exit 1
 fi
 
@@ -256,7 +257,7 @@ echo "  Fish Speech: http://localhost:$FISH_PORT"
 echo "  Web Test:    http://localhost:$WEB_PORT"
 echo ""
 echo "Logs:"
-echo "  vLLM:        $VLLM_INSTALL_DIR/helpers/vllm-server.log"
+echo "  vLLM:        $VLLM_INSTALL_DIR/vllm-server.log"
 echo "  Fish Speech: $LOG_DIR/fish-speech.log"
 echo "  Web Test:    $LOG_DIR/web-test.log"
 echo ""
