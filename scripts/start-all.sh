@@ -133,7 +133,7 @@ log_info "Waiting for vLLM to be ready (this takes 4-5 minutes for large models)
 
 # Wait for vLLM to be ready
 VLLM_WAIT=0
-VLLM_MAX_WAIT=360  # 6 minutes
+VLLM_MAX_WAIT=720  # 12 minutes (large models on DGX Spark can take longer)
 while [ $VLLM_WAIT -lt $VLLM_MAX_WAIT ]; do
     if curl -s "http://localhost:$VLLM_PORT/health" > /dev/null 2>&1; then
         log_success "vLLM is ready on port $VLLM_PORT"
@@ -176,7 +176,7 @@ log_info "Waiting for Fish Speech to be ready..."
 
 # Wait for Fish Speech to be ready
 FISH_WAIT=0
-FISH_MAX_WAIT=180  # 3 minutes
+FISH_MAX_WAIT=360  # 6 minutes (first run compiles Triton kernels)
 while [ $FISH_WAIT -lt $FISH_MAX_WAIT ]; do
     if curl -s "http://localhost:$FISH_PORT/v1/health" > /dev/null 2>&1; then
         log_success "Fish Speech is ready on port $FISH_PORT"
